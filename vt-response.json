@@ -1,0 +1,790 @@
+{
+  "data": {
+    "id": "8e37037913be228f104bf84d947da511926f650c90a84966a3c24fe182229ba9",
+    "type": "url",
+    "links": {
+      "self": "https://www.virustotal.com/api/v3/urls/8e37037913be228f104bf84d947da511926f650c90a84966a3c24fe182229ba9"
+    },
+    "attributes": {
+      "last_http_response_headers": {
+        "Report-To": "{\"group\":\"default\",\"max_age\":31536000,\"endpoints\":[{\"url\":\"https://scotthelme.report-uri.com/a/d/g\"}],\"include_subdomains\":true}",
+        "Content-Security-Policy": "default-src 'none'; script-src 'self' 'report-sha256' 'report-sample'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; report-uri https://scotthelme.report-uri.com/r/d/csp/enforce; report-to default",
+        "Transfer-Encoding": "chunked",
+        "Content-Type": "text/html",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Encoding": "gzip",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Last-Modified": "Wed, 01 Jul 2026 19:39:17 GMT",
+        "NEL": "{\"report_to\":\"default\",\"max_age\":31536000,\"include_subdomains\":true}",
+        "X-Frame-Options": "DENY",
+        "CF-RAY": "a25f0b754ee3e9df-LAX",
+        "vary": "accept-encoding",
+        "Reporting-Endpoints": "default=\"https://scotthelme.report-uri.com/a/d/g\"",
+        "Server": "cloudflare",
+        "X-XSS-Protection": "0",
+        "Connection": "keep-alive",
+        "Date": "Tue, 04 Aug 2026 16:47:35 GMT",
+        "cf-cache-status": "DYNAMIC",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Permissions-Policy": "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), usb=(), web-share=(), xr-spatial-tracking=(), interest-cohort=(), browsing-topics=()"
+      },
+      "console_messages": [],
+      "last_http_response_cookies": {},
+      "first_submission_date": 1476416338,
+      "last_analysis_date": 1785862053,
+      "proxy_country": "US",
+      "last_http_response_code": 200,
+      "tags": [],
+      "last_http_response_content_length": 11513,
+      "html_meta": {
+        "og:type": [
+          "website"
+        ],
+        "description": [
+          "HTTP Forever is a plain-HTTP page that helps you trigger captive portal login screens on public WiFi — on trains, in hotels, bars and on flights."
+        ],
+        "twitter:creator": [
+          "@Scott_Helme"
+        ],
+        "twitter:image": [
+          "http://httpforever.com/og-image.png"
+        ],
+        "viewport": [
+          "width=device-width, initial-scale=1"
+        ],
+        "og:description": [
+          "A plain-HTTP page that helps you trigger captive portal login screens on public WiFi — on trains, in hotels, bars and on flights."
+        ],
+        "twitter:image:alt": [
+          "An open padlock beside the HTTP Forever wordmark on a green background."
+        ],
+        "keywords": [
+          "http, captive portal, wifi login, captive portal buster, insecure, no https"
+        ],
+        "og:site_name": [
+          "HTTP Forever"
+        ],
+        "theme-color": [
+          "#2f8f4e"
+        ],
+        "og:image": [
+          "http://httpforever.com/og-image.png"
+        ],
+        "og:image:height": [
+          "630"
+        ],
+        "twitter:site": [
+          "@Scott_Helme"
+        ],
+        "og:title": [
+          "HTTP Forever — A reliably insecure connection"
+        ],
+        "og:url": [
+          "http://httpforever.com/"
+        ],
+        "og:locale": [
+          "en_GB"
+        ],
+        "twitter:title": [
+          "HTTP Forever — A reliably insecure connection"
+        ],
+        "og:image:width": [
+          "1200"
+        ],
+        "og:image:alt": [
+          "An open padlock beside the HTTP Forever wordmark on a green background."
+        ],
+        "twitter:card": [
+          "summary_large_image"
+        ],
+        "author": [
+          "Scott Helme"
+        ],
+        "robots": [
+          "index, follow"
+        ],
+        "twitter:description": [
+          "A plain-HTTP page that helps you trigger captive portal login screens on public WiFi — on trains, in hotels, bars and on flights."
+        ]
+      },
+      "last_modification_date": 1785862364,
+      "last_submission_date": 1785862053,
+      "last_http_response_cookies_extended": [],
+      "last_final_url": "http://httpforever.com/",
+      "web_category": "unspecified",
+      "redirection_chain": [
+        "http://httpforever.com/",
+        "https://httpforever.com/",
+        "http://httpforever.com/"
+      ],
+      "title": "HTTP Forever — A reliably insecure connection",
+      "last_analysis_results": {
+        "Acronis": {
+          "method": "blacklist",
+          "engine_name": "Acronis",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Abusix": {
+          "method": "blacklist",
+          "engine_name": "Abusix",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "ADMINUSLabs": {
+          "method": "blacklist",
+          "engine_name": "ADMINUSLabs",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Lionic": {
+          "method": "blacklist",
+          "engine_name": "Lionic",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Criminal IP": {
+          "method": "blacklist",
+          "engine_name": "Criminal IP",
+          "category": "malicious",
+          "result": "phishing"
+        },
+        "AILabs (MONITORAPP)": {
+          "method": "blacklist",
+          "engine_name": "AILabs (MONITORAPP)",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "AlienVault": {
+          "method": "blacklist",
+          "engine_name": "AlienVault",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "alphaMountain.ai": {
+          "method": "blacklist",
+          "engine_name": "alphaMountain.ai",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "AlphaSOC": {
+          "method": "blacklist",
+          "engine_name": "AlphaSOC",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Antiy-AVL": {
+          "method": "blacklist",
+          "engine_name": "Antiy-AVL",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "ArcSight Threat Intelligence": {
+          "method": "blacklist",
+          "engine_name": "ArcSight Threat Intelligence",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "AutoShun": {
+          "method": "blacklist",
+          "engine_name": "AutoShun",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Bfore.Ai PreCrime": {
+          "method": "blacklist",
+          "engine_name": "Bfore.Ai PreCrime",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "BitDefender": {
+          "method": "blacklist",
+          "engine_name": "BitDefender",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Bkav": {
+          "method": "blacklist",
+          "engine_name": "Bkav",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "BlockList": {
+          "method": "blacklist",
+          "engine_name": "BlockList",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Blueliv": {
+          "method": "blacklist",
+          "engine_name": "Blueliv",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Certego": {
+          "method": "blacklist",
+          "engine_name": "Certego",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "ChainPatrol": {
+          "method": "blacklist",
+          "engine_name": "ChainPatrol",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Chong Lua Dao": {
+          "method": "blacklist",
+          "engine_name": "Chong Lua Dao",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "CINS Army": {
+          "method": "blacklist",
+          "engine_name": "CINS Army",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Snort IP sample list": {
+          "method": "blacklist",
+          "engine_name": "Snort IP sample list",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Cluster25": {
+          "method": "blacklist",
+          "engine_name": "Cluster25",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Xcitium Verdict Cloud": {
+          "method": "blacklist",
+          "engine_name": "Xcitium Verdict Cloud",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "CRDF": {
+          "method": "blacklist",
+          "engine_name": "CRDF",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "CSIS Security Group": {
+          "method": "blacklist",
+          "engine_name": "CSIS Security Group",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Cyan": {
+          "method": "blacklist",
+          "engine_name": "Cyan",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Cyble": {
+          "method": "blacklist",
+          "engine_name": "Cyble",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "CyRadar": {
+          "method": "blacklist",
+          "engine_name": "CyRadar",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "desenmascara.me": {
+          "method": "blacklist",
+          "engine_name": "desenmascara.me",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "DNS8": {
+          "method": "blacklist",
+          "engine_name": "DNS8",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Dr.Web": {
+          "method": "blacklist",
+          "engine_name": "Dr.Web",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Emsisoft": {
+          "method": "blacklist",
+          "engine_name": "Emsisoft",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Ermes": {
+          "method": "blacklist",
+          "engine_name": "Ermes",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "ESET": {
+          "method": "blacklist",
+          "engine_name": "ESET",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "ESTsecurity": {
+          "method": "blacklist",
+          "engine_name": "ESTsecurity",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "EmergingThreats": {
+          "method": "blacklist",
+          "engine_name": "EmergingThreats",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Fortinet": {
+          "method": "blacklist",
+          "engine_name": "Fortinet",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "G-Data": {
+          "method": "blacklist",
+          "engine_name": "G-Data",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Google Safe Browsing": {
+          "method": "blacklist",
+          "engine_name": "Google Safe Browsing",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "GCP Abuse Intelligence": {
+          "method": "blacklist",
+          "engine_name": "GCP Abuse Intelligence",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "GreenSnow": {
+          "method": "blacklist",
+          "engine_name": "GreenSnow",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "GreyNoise": {
+          "method": "blacklist",
+          "engine_name": "GreyNoise",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Gridinsoft": {
+          "method": "blacklist",
+          "engine_name": "Gridinsoft",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Guardpot": {
+          "method": "blacklist",
+          "engine_name": "Guardpot",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Heimdal Security": {
+          "method": "blacklist",
+          "engine_name": "Heimdal Security",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Hunt.io Intelligence": {
+          "method": "blacklist",
+          "engine_name": "Hunt.io Intelligence",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "IPsum": {
+          "method": "blacklist",
+          "engine_name": "IPsum",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Juniper Networks": {
+          "method": "blacklist",
+          "engine_name": "Juniper Networks",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "K7AntiVirus": {
+          "method": "blacklist",
+          "engine_name": "K7AntiVirus",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Kaspersky": {
+          "method": "blacklist",
+          "engine_name": "Kaspersky",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Lumu": {
+          "method": "blacklist",
+          "engine_name": "Lumu",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Malwared": {
+          "method": "blacklist",
+          "engine_name": "Malwared",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "MalwareURL": {
+          "method": "blacklist",
+          "engine_name": "MalwareURL",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "MalwarePatrol": {
+          "method": "blacklist",
+          "engine_name": "MalwarePatrol",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "CTX AI": {
+          "method": "blacklist",
+          "engine_name": "CTX AI",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Mimecast": {
+          "method": "blacklist",
+          "engine_name": "Mimecast",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Netcraft": {
+          "method": "blacklist",
+          "engine_name": "Netcraft",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "OpenPhish": {
+          "method": "blacklist",
+          "engine_name": "OpenPhish",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "0xSI_f33d": {
+          "method": "blacklist",
+          "engine_name": "0xSI_f33d",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Phishing Database": {
+          "method": "blacklist",
+          "engine_name": "Phishing Database",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "PhishFort": {
+          "method": "blacklist",
+          "engine_name": "PhishFort",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Fortra": {
+          "method": "blacklist",
+          "engine_name": "Fortra",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Phishtank": {
+          "method": "blacklist",
+          "engine_name": "Phishtank",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "PREBYTES": {
+          "method": "blacklist",
+          "engine_name": "PREBYTES",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "PrecisionSec": {
+          "method": "blacklist",
+          "engine_name": "PrecisionSec",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Quick Heal": {
+          "method": "blacklist",
+          "engine_name": "Quick Heal",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Quttera": {
+          "method": "blacklist",
+          "engine_name": "Quttera",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Rising": {
+          "method": "blacklist",
+          "engine_name": "Rising",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "SafeToOpen": {
+          "method": "blacklist",
+          "engine_name": "SafeToOpen",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Sangfor": {
+          "method": "blacklist",
+          "engine_name": "Sangfor",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Sansec eComscan": {
+          "method": "blacklist",
+          "engine_name": "Sansec eComscan",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Scantitan": {
+          "method": "blacklist",
+          "engine_name": "Scantitan",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "SCUMWARE.org": {
+          "method": "blacklist",
+          "engine_name": "SCUMWARE.org",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Seclookup": {
+          "method": "blacklist",
+          "engine_name": "Seclookup",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "SOCRadar": {
+          "method": "blacklist",
+          "engine_name": "SOCRadar",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Sophos": {
+          "method": "blacklist",
+          "engine_name": "Sophos",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "StopForumSpam": {
+          "method": "blacklist",
+          "engine_name": "StopForumSpam",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Sucuri SiteCheck": {
+          "method": "blacklist",
+          "engine_name": "Sucuri SiteCheck",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "ThreatHive": {
+          "method": "blacklist",
+          "engine_name": "ThreatHive",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "LevelBlue": {
+          "method": "blacklist",
+          "engine_name": "LevelBlue",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "URLhaus": {
+          "method": "blacklist",
+          "engine_name": "URLhaus",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "URLQuery": {
+          "method": "blacklist",
+          "engine_name": "URLQuery",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "Viettel Threat Intelligence": {
+          "method": "blacklist",
+          "engine_name": "Viettel Threat Intelligence",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "VIPRE": {
+          "method": "blacklist",
+          "engine_name": "VIPRE",
+          "category": "undetected",
+          "result": "unrated"
+        },
+        "ViriBack": {
+          "method": "blacklist",
+          "engine_name": "ViriBack",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "VX Vault": {
+          "method": "blacklist",
+          "engine_name": "VX Vault",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Webroot": {
+          "method": "blacklist",
+          "engine_name": "Webroot",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Forcepoint ThreatSeeker": {
+          "method": "blacklist",
+          "engine_name": "Forcepoint ThreatSeeker",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "Yandex Safebrowsing": {
+          "method": "blacklist",
+          "engine_name": "Yandex Safebrowsing",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "ZeroCERT": {
+          "method": "blacklist",
+          "engine_name": "ZeroCERT",
+          "category": "harmless",
+          "result": "clean"
+        },
+        "ZeroFox": {
+          "method": "blacklist",
+          "engine_name": "ZeroFox",
+          "category": "undetected",
+          "result": "unrated"
+        }
+      },
+      "times_submitted": 358,
+      "last_http_response_content_sha256": "afb0c937d961547007b27471cf47bd6b9f87cf4f90ed55024d1f676f5accd5b4",
+      "last_analysis_stats": {
+        "malicious": 1,
+        "suspicious": 0,
+        "undetected": 34,
+        "harmless": 57,
+        "timeout": 0
+      },
+      "threat_names": [],
+      "tld": "com",
+      "categories": {
+        "alphaMountain.ai": "Information Technology (alphaMountain.ai)",
+        "BitDefender": "computersandsoftware",
+        "Xcitium Verdict Cloud": "hosted personal pages",
+        "Sophos": "information technology",
+        "Forcepoint ThreatSeeker": "information technology"
+      },
+      "outgoing_links": [
+        "https://twitter.com/Scott_Helme",
+        "https://scotthelme.co.uk",
+        "https://github.com/ScottHelme",
+        "https://www.linkedin.com/in/scotthelme/",
+        "https://www.facebook.com/scott.helme",
+        "https://www.youtube.com/user/ScottHelme",
+        "https://securityheaders.com",
+        "https://report-uri.com",
+        "https://crawler.ninja",
+        "https://whynopasskeys.com",
+        "https://creativecommons.org/licenses/by-sa/4.0/"
+      ],
+      "javascript_variables": [
+        {
+          "type": null,
+          "value": null,
+          "name": "event",
+          "sha256": "a9dc16a7a3875d174c1af4f923f261cafc124357f2322493a59ee0d14fcd10db"
+        },
+        {
+          "type": "JS_TYPE_OBJECT",
+          "value": null,
+          "name": "oncommand",
+          "sha256": "a9dc16a7a3875d174c1af4f923f261cafc124357f2322493a59ee0d14fcd10db"
+        },
+        {
+          "type": "JS_TYPE_OBJECT",
+          "value": null,
+          "name": "onanimationcancel",
+          "sha256": "a9dc16a7a3875d174c1af4f923f261cafc124357f2322493a59ee0d14fcd10db"
+        },
+        {
+          "type": "JS_TYPE_OBJECT",
+          "value": null,
+          "name": "crashReport",
+          "sha256": "52133ddfcd583280388a8bbfb67a417b6b660f75bc63ec1b01beec811d4498ef"
+        },
+        {
+          "type": "JS_TYPE_OBJECT",
+          "value": null,
+          "name": "viewport",
+          "sha256": "52133ddfcd583280388a8bbfb67a417b6b660f75bc63ec1b01beec811d4498ef"
+        },
+        {
+          "type": "JS_TYPE_OBJECT",
+          "value": null,
+          "name": "onpageswap",
+          "sha256": "a9dc16a7a3875d174c1af4f923f261cafc124357f2322493a59ee0d14fcd10db"
+        },
+        {
+          "type": "JS_TYPE_OBJECT",
+          "value": null,
+          "name": "onpagereveal",
+          "sha256": "a9dc16a7a3875d174c1af4f923f261cafc124357f2322493a59ee0d14fcd10db"
+        },
+        {
+          "type": "JS_TYPE_OBJECT",
+          "value": null,
+          "name": "fence",
+          "sha256": "a9dc16a7a3875d174c1af4f923f261cafc124357f2322493a59ee0d14fcd10db"
+        },
+        {
+          "type": "JS_TYPE_OBJECT",
+          "value": null,
+          "name": "onscrollsnapchange",
+          "sha256": "a9dc16a7a3875d174c1af4f923f261cafc124357f2322493a59ee0d14fcd10db"
+        },
+        {
+          "type": "JS_TYPE_OBJECT",
+          "value": null,
+          "name": "onscrollsnapchanging",
+          "sha256": "a9dc16a7a3875d174c1af4f923f261cafc124357f2322493a59ee0d14fcd10db"
+        },
+        {
+          "type": "JS_TYPE_OBJECT",
+          "value": null,
+          "name": "ongamepadconnected",
+          "sha256": "a9dc16a7a3875d174c1af4f923f261cafc124357f2322493a59ee0d14fcd10db"
+        },
+        {
+          "type": "JS_TYPE_OBJECT",
+          "value": null,
+          "name": "ongamepaddisconnected",
+          "sha256": "a9dc16a7a3875d174c1af4f923f261cafc124357f2322493a59ee0d14fcd10db"
+        }
+      ],
+      "url": "http://httpforever.com/",
+      "reputation": 0,
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "total_votes": {
+        "harmless": 0,
+        "malicious": 0
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+MIT License
+
+Copyright (c) 2026 ThreatAtlas (threatatlas.luckyverse.tech)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+THIRD-PARTY ATTRIBUTIONS
+
+This software uses the VirusTotal Public API (https://www.virustotal.com).
+VirusTotal is a service of Google LLC. Use of the VirusTotal API is subject to
+VirusTotal's Terms of Service and Privacy Policy:
+  - Terms: https://support.virustotal.com/hc/en-us/articles/115002145529-Terms-of-Service
+  - Privacy: https://support.virustotal.com/hc/en-us/articles/115002168385-Privacy-Policy
+
+Typography provided by Google Fonts under the Open Font License (OFL):
+  - Space Grotesk: Copyright 2020 Florian Karsten
+  - IBM Plex Sans: Copyright IBM Corp. 2017
+  - JetBrains Mono: Copyright 2020 JetBrains s.r.o.
