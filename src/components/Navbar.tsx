@@ -1,13 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { ScanHistoryDrawer } from './ScanHistoryDrawer';
+import { useScanHistory } from '../services/historyStore';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
   const { user, isAuthenticated, openAuthModal, logout } = useAuth();
+  const { history } = useScanHistory();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -55,6 +59,36 @@ export const Navbar: React.FC = () => {
           <Link to="/url" className={location.pathname.includes('/url') ? 'active' : ''}>URL</Link>
           <Link to="/search" className={location.pathname.includes('/search') || location.pathname.includes('/lookup') || location.pathname.includes('/ip-address') || location.pathname.includes('/domain') ? 'active' : ''}>SEARCH</Link>
           <Link to="/about" className={location.pathname.includes('/about') ? 'active' : ''}>ABOUT</Link>
+
+          {/* History Button */}
+          <button
+            onClick={() => setHistoryOpen(true)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--on-surface-variant)',
+              padding: '6px 12px',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              letterSpacing: '0.08em',
+              transition: 'color 0.15s ease'
+            }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#00f2ff')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--on-surface-variant)')}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>history</span>
+            HISTORY
+            {history.length > 0 && (
+              <span style={{ background: 'rgba(0, 242, 255, 0.15)', border: '1px solid rgba(0, 242, 255, 0.3)', color: '#00f2ff', padding: '1px 6px', borderRadius: '999px', fontSize: '10px' }}>
+                {history.length}
+              </span>
+            )}
+          </button>
 
           {/* User Auth Profile / Login Button */}
           {isAuthenticated && user ? (
@@ -218,6 +252,9 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Persistent Scan History Drawer */}
+      <ScanHistoryDrawer isOpen={historyOpen} onClose={() => setHistoryOpen(false)} />
     </>
   );
 };

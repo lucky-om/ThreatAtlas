@@ -39,6 +39,11 @@ import { AudioForensicsCard } from '../components/AudioForensicsCard';
 import { VideoForensicsCard } from '../components/VideoForensicsCard';
 import { DocumentForensicsCard } from '../components/DocumentForensicsCard';
 import { ArchiveForensicsCard } from '../components/ArchiveForensicsCard';
+import { CertInspectorCard } from '../components/CertInspectorCard';
+import { ThreatFeedCard } from '../components/ThreatFeedCard';
+import { generatePdfThreatReport } from '../utils/pdfExport';
+import { addScanHistoryItem } from '../services/historyStore';
+import { getCachedItem, setCachedItem } from '../services/cache';
 import { formatRelativeTime, formatBytes } from '../utils/sanitize';
 
 type Tab = 'DETECTION' | 'DETAILS' | 'BEHAVIOR' | 'RELATIONS' | 'COMMUNITY' | 'SUMMARY';
@@ -67,6 +72,7 @@ export const Results: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string>('Basic Properties');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [communityVote, setCommunityVote] = useState<'up' | 'down' | null>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const navigate = useNavigate();
 
@@ -104,11 +110,36 @@ export const Results: React.FC = () => {
         target.includes(':') || 
         (target.length >= 44 && !isHash && /[+/=]/.test(target));
 
+      // ── Check Fast Cache first ───────────────────────────────────────────
+      const cached = getCachedItem<any>(target);
+      if (cached) {
+        if (cached.sha256 || cached.names) setFileResult(cached);
+        else if (cached.domain) setDomainResult(cached);
+        else if (cached.ip) setIpResult(cached);
+        else setAnalysisResult(cached);
+        setLoading(false);
+      }
+
       // ── 1. Cryptographic Hash Search (Direct File Lookup) ─────────────────
       if (isHash) {
         try {
           const data = await lookupHash(target);
           setFileResult(data);
+          setCachedItem(target, data);
+
+          addScanHistoryItem({
+            id: data.id || target,
+            target,
+            type: 'file',
+            name: data.name || data.names?.[0] || target,
+            hash: data.sha256,
+            verdict: data.verdict || (data.stats?.malicious > 0 ? 'malicious' : 'clean'),
+            threatScore: data.stats?.malicious || 0,
+            maliciousCount: data.stats?.malicious || 0,
+            totalEngines: data.engines?.length || 70,
+            fileSize: data.size
+          });
+
           try {
             const behaviorRes = await fetch(`/api/vt/files/${target}/behaviours?limit=5`);
             if (behaviorRes.ok) {
@@ -131,17 +162,44 @@ export const Results: React.FC = () => {
             setAnalysisResult(progress);
           });
           setAnalysisResult(analysisData);
+          setCachedItem(target, analysisData);
 
           if (analysisData.hash) {
             try {
               const fullFileData = await lookupHash(analysisData.hash);
               setFileResult(fullFileData);
+              setCachedItem(analysisData.hash, fullFileData);
+
+              addScanHistoryItem({
+                id: fullFileData.id || analysisData.hash,
+                target: analysisData.hash,
+                type: 'file',
+                name: fullFileData.name || fullFileData.names?.[0] || 'Sample File',
+                hash: fullFileData.sha256,
+                verdict: fullFileData.verdict || (fullFileData.stats?.malicious > 0 ? 'malicious' : 'clean'),
+                threatScore: fullFileData.stats?.malicious || 0,
+                maliciousCount: fullFileData.stats?.malicious || 0,
+                totalEngines: fullFileData.engines?.length || 70,
+                fileSize: fullFileData.size
+              });
+
               try {
                 const behaviorRes = await fetch(`/api/vt/files/${analysisData.hash}/behaviours?limit=5`);
                 if (behaviorRes.ok) setBehaviorData(await behaviorRes.json());
               } catch (_) {}
             } catch (_) {}
           } else if (analysisData.url) {
+            addScanHistoryItem({
+              id: analysisData.id || target,
+              target: analysisData.url,
+              type: 'url',
+              name: analysisData.url,
+              verdict: analysisData.verdict || (analysisData.stats?.malicious > 0 ? 'malicious' : 'clean'),
+              threatScore: analysisData.stats?.malicious || 0,
+              maliciousCount: analysisData.stats?.malicious || 0,
+              totalEngines: analysisData.engines?.length || 70
+            });
+
             try {
               setPhishResult(analyzeWithPhishGuard(analysisData.url));
             } catch (_) {}
@@ -169,6 +227,18 @@ export const Results: React.FC = () => {
         try {
           const ipData = await lookupIpGeo(target);
           setIpResult(ipData);
+          setCachedItem(target, ipData);
+
+          addScanHistoryItem({
+            id: ipData.ip || target,
+            target,
+            type: 'ip',
+            name: `${ipData.ip} (${ipData.country || 'Unknown'})`,
+            verdict: (ipData.stats?.malicious || 0) > 0 ? 'malicious' : 'clean',
+            threatScore: ipData.stats?.malicious || 0,
+            maliciousCount: ipData.stats?.malicious || 0,
+            totalEngines: ipData.engines?.length || 70
+          });
         } catch (err: any) {
           setError(err.message || 'Failed to lookup IP address.');
         } finally {
@@ -193,6 +263,18 @@ export const Results: React.FC = () => {
         try {
           const domainData = await lookupDomain(target);
           setDomainResult(domainData);
+          setCachedItem(target, domainData);
+
+          addScanHistoryItem({
+            id: domainData.domain || target,
+            target,
+            type: 'domain',
+            name: domainData.domain,
+            verdict: (domainData.stats?.malicious || 0) > 0 ? 'malicious' : 'clean',
+            threatScore: domainData.stats?.malicious || 0,
+            maliciousCount: domainData.stats?.malicious || 0,
+            totalEngines: domainData.engines?.length || 70
+          });
         } catch (err: any) {
           setError(err.message || 'Failed to fetch domain intelligence.');
         } finally {
@@ -215,6 +297,18 @@ export const Results: React.FC = () => {
       try {
         const report = await getUrlReport(targetUrl);
         setAnalysisResult(report);
+        setCachedItem(target, report);
+
+        addScanHistoryItem({
+          id: report.id || target,
+          target: targetUrl,
+          type: 'url',
+          name: targetUrl,
+          verdict: report.verdict || ((report.stats?.malicious || 0) > 0 ? 'malicious' : 'clean'),
+          threatScore: report.stats?.malicious || 0,
+          maliciousCount: report.stats?.malicious || 0,
+          totalEngines: report.engines?.length || 70
+        });
       } catch (_) {
         try {
           const scanRes = await scanUrl(targetUrl);
@@ -268,7 +362,7 @@ export const Results: React.FC = () => {
   }
 
   const isPending = analysisResult?.status === 'queued' || analysisResult?.status === 'in-progress';
-  const isFile = Boolean(fileResult || (analysisResult && !analysisResult.url && !!analysisResult.hash));
+  const isFile = Boolean(fileResult || (analysisResult && !analysisResult.url && !analysisResult.hash));
   const stats = fileResult?.stats || analysisResult?.stats || domainResult?.stats || ipResult?.stats;
   const engines = fileResult?.engines || analysisResult?.engines || domainResult?.engines || ipResult?.engines || [];
 
@@ -291,8 +385,24 @@ export const Results: React.FC = () => {
   const docForensics = fileCategory === 'document' ? extractDocumentForensics(fileResult) : null;
   const archiveForensics = fileCategory === 'archive' ? extractArchiveForensics(fileResult) : null;
 
-  // Check if a specialized forensic module is active
   const hasSpecializedModule = Boolean(isImage || audioForensics || videoForensics || docForensics || archiveForensics);
+
+  const handleExportPdf = () => {
+    const data = fileResult || analysisResult || domainResult || ipResult;
+    if (!data) return;
+    setIsExportingPdf(true);
+    try {
+      generatePdfThreatReport({
+        threatData: data,
+        targetType: isFile ? 'file' : domainResult ? 'domain' : ipResult ? 'ip' : 'url',
+        aiSummaryText: `ThreatAtlas Automated Analysis for ${displayHash}. Threat score is ${score}/${total}. Multi-engine vendor analysis conducted with complete YARA, heuristic forensics, and reputation feeds.`,
+        imageForensics,
+        docForensics
+      });
+    } finally {
+      setTimeout(() => setIsExportingPdf(false), 1000);
+    }
+  };
 
   const handleTabChange = (t: Tab) => {
     setActiveTab(t);
@@ -406,8 +516,8 @@ export const Results: React.FC = () => {
                 )}
               </div>
 
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {/* Action Buttons (Reanalyze, Similar, Export PDF, More) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                 <button 
                   className="font-code-sm"
                   onClick={() => window.location.reload()}
@@ -449,6 +559,35 @@ export const Results: React.FC = () => {
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>compare_arrows</span>
                   Similar
+                </button>
+
+                {/* 1-Click Executive PDF Report Download */}
+                <button 
+                  className="font-code-sm"
+                  onClick={handleExportPdf}
+                  disabled={isExportingPdf}
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(0, 242, 255, 0.15), rgba(185, 66, 255, 0.15))',
+                    border: '1px solid rgba(0, 242, 255, 0.4)',
+                    color: '#00f2ff',
+                    borderRadius: '6px',
+                    padding: '5px 12px',
+                    cursor: isExportingPdf ? 'wait' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    boxShadow: '0 0 12px rgba(0,242,255,0.15)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 0 20px rgba(0,242,255,0.3)'; e.currentTarget.style.borderColor = '#00f2ff'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 0 12px rgba(0,242,255,0.15)'; e.currentTarget.style.borderColor = 'rgba(0, 242, 255, 0.4)'; }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>
+                    {isExportingPdf ? 'sync' : 'picture_as_pdf'}
+                  </span>
+                  {isExportingPdf ? 'Generating...' : 'Export PDF'}
                 </button>
 
                 <button 
@@ -633,7 +772,7 @@ export const Results: React.FC = () => {
           gap: '4px',
           overflowX: 'auto'
         }}>
-          {(['DETECTION', 'DETAILS', 'BEHAVIOR', 'RELATIONS', 'COMMUNITY'] as Tab[]).map((t) => {
+          {(['DETECTION', 'DETAILS', 'BEHAVIOR', 'RELATIONS', 'COMMUNITY', 'SUMMARY'] as Tab[]).map((t) => {
             const isActive = activeTab === t;
             return (
               <button
@@ -737,7 +876,6 @@ export const Results: React.FC = () => {
                     ...(fileResult?.extended?.peInfo ? [{ id: 'details-pe', label: 'PE Headers & Sections' }] : []),
                     ...(fileResult?.extended?.mitreAttack ? [{ id: 'details-mitre', label: 'MITRE ATT&CK Matrix' }] : []),
                     ...(fileResult?.extended?.signatureInfo ? [{ id: 'details-signature', label: 'Signature Info' }] : []),
-                    // DEDUPLICATION: Only render generic raw ExifTool section if no specialized media forensic card is active!
                     ...(!hasSpecializedModule && fileResult?.extended?.exiftool && Object.keys(fileResult.extended.exiftool).length > 0 ? [{ id: 'details-exif', label: 'ExifTool Metadata' }] : []),
                     ...(fileResult?.extended?.packers ? [{ id: 'details-packers', label: 'Packers' }] : []),
                   ].map((sec) => (
@@ -804,7 +942,7 @@ export const Results: React.FC = () => {
                 </div>
               )}
 
-              {/* 1. Basic Properties (Cryptographic Hashes & System Verification) */}
+              {/* 1. Basic Properties */}
               <div id="details-basic" style={{ background: '#111927', border: '1px solid #1e293b', borderRadius: '10px', padding: '28px 32px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #1e293b', paddingBottom: '14px', marginBottom: '20px' }}>
                   <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#f1f5f9' }}>
@@ -1028,6 +1166,7 @@ export const Results: React.FC = () => {
                       </div>
                     )}
 
+                    {/* PE Sections Table with Entropy Visualizer */}
                     {fileResult.extended.peInfo.sections && fileResult.extended.peInfo.sections.length > 0 && (
                       <div style={{ marginTop: '12px' }}>
                         <div style={{ fontSize: '13px', color: '#94a3b8', fontWeight: 600, marginBottom: '10px' }}>Sections ({fileResult.extended.peInfo.sections.length})</div>
@@ -1115,7 +1254,7 @@ export const Results: React.FC = () => {
                 </div>
               )}
 
-              {/* 8. ExifTool Metadata (Only rendered for generic files without a specialized forensic card to prevent duplicate data) */}
+              {/* 8. ExifTool Metadata */}
               {!hasSpecializedModule && fileResult?.extended?.exiftool && Object.keys(fileResult.extended.exiftool).length > 0 && (
                 <div id="details-exif" style={{ background: '#111927', border: '1px solid #1e293b', borderRadius: '10px', padding: '28px 32px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #1e293b', paddingBottom: '14px', marginBottom: '20px' }}>
@@ -1200,7 +1339,7 @@ export const Results: React.FC = () => {
           </div>
         )}
 
-        {/* ── TAB 6: SUMMARY (AI ATLAS SUMMARY) ─────────────────────────────────── */}
+        {/* ── TAB 6: SUMMARY (AI ATLAS SUMMARY + THREAT FEEDS + SSL) ───────────── */}
         {activeTab === 'SUMMARY' && (
           <div style={{
             background: '#111927',
@@ -1212,6 +1351,15 @@ export const Results: React.FC = () => {
             gap: '24px'
           }}>
             <AiSummary threatData={fileResult || analysisResult || domainResult || ipResult} type={isFile ? 'file' : 'url'} />
+            
+            {/* Multi-Source Threat Feeds */}
+            <ThreatFeedCard target={displayHash} threatScore={score} tags={fileResult?.tags} />
+
+            {/* X.509 Certificate Inspector (For URLs and Domains) */}
+            {!isFile && (
+              <CertInspectorCard domain={analysisResult?.url || domainResult?.domain || rawTarget} />
+            )}
+
             {!isFile && phishResult && (
               <PhishGuardCard result={phishResult} url={analysisResult?.url || domainResult?.domain || rawTarget} />
             )}

@@ -4,6 +4,7 @@ import { scanFile, scanUrl, isValidHash, isValidIp, detectInputType } from '../s
 import { sanitizeInput, normalizeUrlForScan } from '../utils/sanitize';
 import { YaraScannerModule } from '../components/YaraScannerModule';
 import { BulkIocModule } from '../components/BulkIocModule';
+import { useScanHistory } from '../services/historyStore';
 
 type MainTab = 'file' | 'url' | 'search';
 
@@ -455,6 +456,92 @@ export const Home: React.FC<HomeProps> = ({ initialTab }) => {
 
         </div>
 
+        {/* Recent Scans Quick History Shelf */}
+        <RecentScansShelf />
+
+      </div>
+    </div>
+  );
+};
+
+const RecentScansShelf: React.FC = () => {
+  const { history } = useScanHistory();
+  const navigate = useNavigate();
+
+  if (!history || history.length === 0) return null;
+
+  const recent = history.slice(0, 4);
+
+  return (
+    <div style={{ marginTop: '36px', width: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="material-symbols-outlined text-primary" style={{ fontSize: '20px' }}>history</span>
+          <h3 className="font-headline-sm" style={{ margin: 0, fontSize: '16px', color: '#f1f5f9' }}>
+            Recent Scans & Threat Reports
+          </h3>
+        </div>
+        <span style={{ fontSize: '11px', color: '#64748b', fontFamily: 'var(--font-mono)' }}>
+          {history.length} items in local history
+        </span>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
+        {recent.map((item) => {
+          const isMal = item.maliciousCount > 0 || item.threatScore > 0;
+          const badgeColor = isMal ? '#ff2a5f' : '#00ffa3';
+          return (
+            <div
+              key={item.id + item.timestamp}
+              onClick={() => {
+                if (item.type === 'file') navigate(`/file/${item.hash || item.target || item.id}`);
+                else if (item.type === 'url') navigate(`/url/${item.id || encodeURIComponent(item.target)}`);
+                else if (item.type === 'ip') navigate(`/ip-address/${item.target}`);
+                else if (item.type === 'domain') navigate(`/domain/${encodeURIComponent(item.target)}`);
+                else navigate(`/search?query=${encodeURIComponent(item.target)}`);
+              }}
+              style={{
+                background: '#111927',
+                border: '1px solid #1e293b',
+                borderRadius: '8px',
+                padding: '14px 16px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#00f2ff'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#1e293b'; e.currentTarget.style.transform = 'none'; }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#38bdf8', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+                  {item.type}
+                </span>
+                <span style={{
+                  background: `${badgeColor}15`,
+                  border: `1px solid ${badgeColor}40`,
+                  color: badgeColor,
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  fontFamily: 'var(--font-mono)'
+                }}>
+                  {item.maliciousCount > 0 ? `${item.maliciousCount}/${item.totalEngines} MALICIOUS` : 'CLEAN'}
+                </span>
+              </div>
+
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {item.name || item.target}
+              </div>
+
+              <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {item.hash || item.target}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
