@@ -1,4 +1,5 @@
 // VirusTotal API Service & Data Normalizers
+import { normalizeUrlForScan, sanitizeUrl } from '../utils/sanitize';
 
 export interface EngineResult {
   engine: string;
@@ -37,6 +38,15 @@ export interface CommunityComment {
   votes: { positive: number; negative: number; abuse: number };
 }
 
+export interface CrowdsourcedYaraRule {
+  rule_name: string;
+  ruleset_name?: string;
+  author?: string;
+  description?: string;
+  source?: string;
+  match_data?: any;
+}
+
 export interface ExtendedDetails {
   categories?: Record<string, string>;
   history?: {
@@ -44,6 +54,12 @@ export interface ExtendedDetails {
     lastSubmission?: number;
     lastAnalysis?: number;
   };
+  ssdeep?: string;
+  tlsh?: string;
+  vhash?: string;
+  magika?: string;
+  crowdsourcedYara?: CrowdsourcedYaraRule[];
+  sigmaAnalysis?: any[];
   redirectionChain?: string[];
   httpResponse?: {
     finalUrl?: string;
@@ -73,6 +89,9 @@ export interface ExtendedDetails {
   };
   packers?: Record<string, string>;
   mitreAttack?: MitreAttackTechnique[];
+  pdfInfo?: Record<string, any>;
+  officeInfo?: Record<string, any>;
+  bundleInfo?: Record<string, any>;
 }
 
 export interface EntityRelations {
@@ -391,11 +410,49 @@ export async function lookupIpGeo(query: string): Promise<NormalizedIp & { vtAva
   return { ...normalized, vtAvailable } as any;
 }
 
+// Convert a URL to VirusTotal base64url identifier
+export function urlToBase64Id(url: string): string {
+  const normalized = normalizeUrlForScan(url);
+  try {
+    return btoa(unescape(encodeURIComponent(normalized)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  } catch (_) {
+    return btoa(normalized).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+}
+
+// Fetch direct cached report for a URL via VirusTotal API
+export async function getUrlReport(urlOrId: string): Promise<NormalizedAnalysis> {
+  const isPlainUrl = urlOrId.startsWith('http') || (urlOrId.includes('.') && !urlOrId.startsWith('u-'));
+  const id = isPlainUrl ? urlToBase64Id(urlOrId) : urlOrId;
+  const raw = await vtFetch<any>(`/urls/${id}`);
+  const normalized = normalizeAnalysis(raw);
+
+  // Fetch relations and comments concurrently
+  try {
+    const [relations, comments] = await Promise.all([
+      fetchEntityRelations('urls', id),
+      fetchComments('urls', id)
+    ]);
+    normalized.relations = relations;
+    normalized.comments = comments;
+  } catch (_) {}
+
+  return normalized;
+}
+
 // Submit a URL for scanning
 export async function scanUrl(url: string): Promise<{ data: { id: string } }> {
-  const form = new FormData();
-  form.append('url', url);
-  return vtFetch<{ data: { id: string } }>('/urls', { method: 'POST', body: form });
+  const normalized = normalizeUrlForScan(url);
+  const form = new URLSearchParams();
+  form.append('url', normalized);
+  return vtFetch<{ data: { id: string } }>('/urls', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: form.toString()
+  });
 }
 
 // Submit a file for scanning
@@ -408,14 +465,16 @@ export async function scanFile(file: File): Promise<{ data: { id: string } }> {
   return vtFetch<{ data: { id: string } }>('/files', { method: 'POST', body: form });
 }
 
-// Poll analysis progress
+// Poll analysis progress with fast responsive intervals
 export async function pollAnalysis(
   analysisId: string,
   onProgress?: (data: NormalizedAnalysis) => void
 ): Promise<NormalizedAnalysis> {
   let attempts = 0;
-  const maxAttempts = 15;
-  const interval = 16000;
+  const maxAttempts = 10;
+  const interval = 2500; // 2.5s responsive polling
+
+  let latestData: NormalizedAnalysis | null = null;
 
   while (attempts < maxAttempts) {
     attempts++;
@@ -424,6 +483,7 @@ export async function pollAnalysis(
       const res = await vtFetch<any>(`/analyses/${analysisId}`);
       const status = res?.data?.attributes?.status || 'queued';
       const normalizedData = normalizeAnalysis(res);
+      latestData = normalizedData;
 
       if (onProgress) {
         onProgress(normalizedData);
@@ -432,23 +492,30 @@ export async function pollAnalysis(
       if (status === 'completed') {
         // Fetch comments concurrently if URL / File
         if (normalizedData.hash) {
-          const comments = await fetchComments('files', normalizedData.hash);
-          normalizedData.comments = comments;
+          try {
+            const comments = await fetchComments('files', normalizedData.hash);
+            normalizedData.comments = comments;
+          } catch (_) {}
         }
         return normalizedData;
       }
     } catch (err) {
       if (err instanceof ApiError && err.status === 429) {
-        await new Promise((resolve) => setTimeout(resolve, 20000));
+        await new Promise((resolve) => setTimeout(resolve, 3000));
         continue;
       }
+      if (latestData) return latestData;
       throw err;
     }
 
     await new Promise((resolve) => setTimeout(resolve, interval));
   }
 
-  throw new ApiError('Analysis timed out. Please try again later.', 408);
+  if (latestData) {
+    return latestData;
+  }
+
+  throw new ApiError('Analysis is queued in the global pipeline. Results will update shortly.', 408);
 }
 
 // Lookup hashes directly
@@ -511,16 +578,20 @@ export function isValidIp(ip: string): boolean {
 }
 
 export function detectInputType(input: string): 'hash' | 'ip' | 'domain' | 'url' | 'unknown' {
-  const clean = input.trim();
+  const clean = sanitizeUrl(input).toLowerCase();
+  if (!clean) return 'unknown';
   if (isValidHash(clean)) return 'hash';
   if (isValidIp(clean)) return 'ip';
 
-  try {
-    const url = new URL(clean.startsWith('http') ? clean : `https://${clean}`);
-    if (url.pathname !== '/' || clean.includes('/')) return 'url';
-    if (/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(clean)) return 'domain';
+  // Explicit protocol or path / parameters -> URL
+  if (/^https?:\/\//i.test(clean) || clean.includes('/') || clean.includes('?')) {
     return 'url';
-  } catch (_) {}
+  }
+
+  // Pure domain (e.g. google.com, luckyverse.tech)
+  if (/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(clean)) {
+    return 'domain';
+  }
 
   return 'unknown';
 }
@@ -603,7 +674,16 @@ export function normalizeAnalysis(data: any): NormalizedAnalysis {
     stats: { malicious, suspicious, harmless, undetected, total },
     engines,
     url: attrs.url || data?.meta?.url_info?.url,
-    hash: data?.meta?.file_info?.sha256 || data?.data?.meta?.file_info?.sha256 || attrs.sha256,
+    // Robust extraction across all VirusTotal response topologies
+    hash: data?.meta?.file_info?.sha256
+      || data?.data?.meta?.file_info?.sha256
+      || attrs.sha256
+      || data?.data?.attributes?.sha256
+      || data?.meta?.file_info?.md5
+      || data?.meta?.file_info?.sha1
+      || (data?.data?.links?.item ? data.data.links.item.split('/').pop() : undefined),
+    fileName: data?.meta?.file_info?.name || attrs.meaningful_name || (attrs.names ? attrs.names[0] : undefined),
+    fileSize: data?.meta?.file_info?.size || attrs.size,
     extended
   };
 }
@@ -628,6 +708,19 @@ export function normalizeFileData(data: any): NormalizedFile {
       lastSubmission: attrs.last_submission_date,
       lastAnalysis: attrs.last_analysis_date,
     },
+    ssdeep: attrs.ssdeep,
+    tlsh: attrs.tlsh,
+    vhash: attrs.vhash,
+    magika: attrs.magika,
+    crowdsourcedYara: attrs.crowdsourced_yara_results ? attrs.crowdsourced_yara_results.map((y: any) => ({
+      rule_name: y.rule_name || y.ruleset_name || 'Generic_Rule',
+      ruleset_name: y.ruleset_name,
+      author: y.author,
+      description: y.description,
+      source: y.source,
+      match_data: y.match_data,
+    })) : undefined,
+    sigmaAnalysis: attrs.sigma_analysis_results,
     magic: attrs.magic,
     trid: attrs.trid,
     exiftool: attrs.exiftool,
@@ -638,7 +731,10 @@ export function normalizeFileData(data: any): NormalizedFile {
       id: m.id || m.technique_id,
       signature_description: m.signature_description || m.technique_name,
       tactic: m.tactic || m.tactic_name
-    })) : undefined
+    })) : undefined,
+    pdfInfo: attrs.pdf_info,
+    officeInfo: attrs.office_info || attrs.vba_info,
+    bundleInfo: attrs.bundle_info || attrs.archive_info || attrs.zip_info
   };
 
   return {

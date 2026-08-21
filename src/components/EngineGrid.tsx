@@ -7,6 +7,7 @@ interface EngineGridProps {
 
 export const EngineGrid: React.FC<EngineGridProps> = ({ results }) => {
   const [filter, setFilter] = useState<'all' | 'malicious' | 'clean' | 'unrated'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const engineList = results || [];
   
@@ -15,6 +16,12 @@ export const EngineGrid: React.FC<EngineGridProps> = ({ results }) => {
   const unratedCount = engineList.length - maliciousCount - cleanCount;
 
   const filteredResults = engineList.filter(r => {
+    const matchesSearch = searchQuery === '' || 
+      r.engine.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.result && r.result.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    if (!matchesSearch) return false;
+
     if (filter === 'all') return true;
     if (filter === 'malicious') return r.category === 'malicious';
     if (filter === 'clean') return r.category === 'undetected' || r.category === 'harmless';
@@ -23,77 +30,173 @@ export const EngineGrid: React.FC<EngineGridProps> = ({ results }) => {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
-        <button 
-          className={`btn-primary ${filter === 'all' ? '' : 'inactive'}`}
-          style={{ background: filter === 'all' ? 'var(--primary)' : 'rgba(255,255,255,0.05)', color: filter === 'all' ? '#00363a' : 'var(--on-surface)' }}
-          onClick={() => setFilter('all')}
-        >
-          All ({engineList.length})
-        </button>
-        <button 
-          className="btn-primary"
-          style={{ background: filter === 'malicious' ? 'var(--secondary)' : 'rgba(255,255,255,0.05)', color: filter === 'malicious' ? '#fff' : 'var(--on-surface)', boxShadow: filter === 'malicious' ? '0 0 15px rgba(255,0,60,0.5)' : 'none' }}
-          onClick={() => setFilter('malicious')}
-        >
-          Malicious ({maliciousCount})
-        </button>
-        <button 
-          className="btn-primary"
-          style={{ background: filter === 'clean' ? 'var(--primary)' : 'rgba(255,255,255,0.05)', color: filter === 'clean' ? '#00363a' : 'var(--on-surface)' }}
-          onClick={() => setFilter('clean')}
-        >
-          Clean ({cleanCount})
-        </button>
-        <button 
-          className="btn-primary"
-          style={{ background: filter === 'unrated' ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.05)', color: 'var(--on-surface)' }}
-          onClick={() => setFilter('unrated')}
-        >
-          Unrated ({unratedCount})
-        </button>
+      {/* Controls & Filter Bar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button 
+            className="font-label-caps"
+            style={{ 
+              padding: '6px 14px', 
+              borderRadius: '6px', 
+              cursor: 'pointer',
+              border: filter === 'all' ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.08)',
+              background: filter === 'all' ? 'rgba(0, 242, 255, 0.12)' : 'rgba(255,255,255,0.02)', 
+              color: filter === 'all' ? 'var(--primary)' : 'var(--on-surface-variant)',
+              transition: 'all 0.2s ease'
+            }}
+            onClick={() => setFilter('all')}
+          >
+            All ({engineList.length})
+          </button>
+          
+          <button 
+            className="font-label-caps"
+            style={{ 
+              padding: '6px 14px', 
+              borderRadius: '6px', 
+              cursor: 'pointer',
+              border: filter === 'malicious' ? '1px solid var(--secondary)' : '1px solid rgba(255,255,255,0.08)',
+              background: filter === 'malicious' ? 'rgba(255, 42, 95, 0.15)' : 'rgba(255,255,255,0.02)', 
+              color: filter === 'malicious' ? 'var(--secondary)' : 'var(--on-surface-variant)',
+              transition: 'all 0.2s ease'
+            }}
+            onClick={() => setFilter('malicious')}
+          >
+            Malicious ({maliciousCount})
+          </button>
+          
+          <button 
+            className="font-label-caps"
+            style={{ 
+              padding: '6px 14px', 
+              borderRadius: '6px', 
+              cursor: 'pointer',
+              border: filter === 'clean' ? '1px solid #00ffa3' : '1px solid rgba(255,255,255,0.08)',
+              background: filter === 'clean' ? 'rgba(0, 255, 163, 0.12)' : 'rgba(255,255,255,0.02)', 
+              color: filter === 'clean' ? '#00ffa3' : 'var(--on-surface-variant)',
+              transition: 'all 0.2s ease'
+            }}
+            onClick={() => setFilter('clean')}
+          >
+            Clean ({cleanCount})
+          </button>
+
+          {unratedCount > 0 && (
+            <button 
+              className="font-label-caps"
+              style={{ 
+                padding: '6px 14px', 
+                borderRadius: '6px', 
+                cursor: 'pointer',
+                border: filter === 'unrated' ? '1px solid rgba(255,255,255,0.3)' : '1px solid rgba(255,255,255,0.08)',
+                background: filter === 'unrated' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.02)', 
+                color: filter === 'unrated' ? '#fff' : 'var(--on-surface-variant)',
+                transition: 'all 0.2s ease'
+              }}
+              onClick={() => setFilter('unrated')}
+            >
+              Unrated ({unratedCount})
+            </button>
+          )}
+        </div>
+
+        {/* Search Filter Input */}
+        <div style={{ position: 'relative', width: '220px' }}>
+          <span className="material-symbols-outlined" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '16px', color: 'var(--on-surface-variant)' }}>
+            search
+          </span>
+          <input 
+            type="text" 
+            placeholder="Filter vendor or malware..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '6px 12px 6px 32px',
+              background: 'rgba(0, 0, 0, 0.3)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '6px',
+              color: '#fff',
+              fontSize: '12px',
+              fontFamily: 'var(--font-mono)',
+              outline: 'none',
+            }}
+          />
+        </div>
       </div>
 
-      <div className="engine-grid">
+      {/* 2-Column VirusTotal-Style Engine Rows */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+        gap: '0 32px',
+      }}>
         {filteredResults.map((item, i) => {
           const isMalicious = item.category === 'malicious';
           const isClean = item.category === 'undetected' || item.category === 'harmless';
           
-          let icon = 'help';
-          let iconColor = 'var(--on-surface-variant)';
-          let statusText = 'Unrated';
-          let statusClass = 'status-unrated';
-          let border = '1px solid rgba(255,255,255,0.1)';
-          let shadow = 'none';
+          let icon = 'help_outline';
+          let iconColor = '#6b7280';
+          let statusText = item.result || 'Unrated';
+          let statusColor = '#9ca3af';
 
           if (isMalicious) {
-            icon = 'warning';
-            iconColor = 'var(--secondary)';
+            icon = 'cancel';
+            iconColor = '#ff2a5f';
             statusText = item.result || 'Malicious';
-            statusClass = 'status-malicious';
-            border = '1px solid rgba(255,0,60,0.3)';
-            shadow = '0 0 10px rgba(255,0,60,0.1)';
+            statusColor = '#ff2a5f';
           } else if (isClean) {
             icon = 'check_circle';
-            iconColor = 'var(--primary)';
-            statusText = 'Clean';
-            statusClass = 'status-clean';
-            border = '1px solid rgba(0,242,255,0.1)';
+            iconColor = '#00e5a3';
+            statusText = 'Undetected';
+            statusColor = '#d1d5db';
           }
 
           return (
-            <div key={i} className="engine-item" style={{ border, boxShadow: shadow }}>
-              <span className="font-data-mono">{item.engine}</span>
+            <div 
+              key={i} 
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '12px 14px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
+                transition: 'background 0.15s ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >
+              <span className="font-data-mono" style={{ fontSize: '13px', color: '#e2e8f0', fontWeight: 500 }}>
+                {item.engine}
+              </span>
+
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className={`engine-status-text font-code-sm ${statusClass}`} style={{ color: iconColor }}>{statusText}</span>
-                <span className="material-symbols-outlined" style={{ color: iconColor, fontSize: '18px' }}>{icon}</span>
+                <span className="material-symbols-outlined" style={{ color: iconColor, fontSize: '18px' }}>
+                  {icon}
+                </span>
+                <span 
+                  className="font-code-sm" 
+                  style={{ 
+                    color: statusColor, 
+                    fontWeight: isMalicious ? 600 : 400,
+                    fontSize: '13px',
+                    maxWidth: '200px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                  title={statusText}
+                >
+                  {statusText}
+                </span>
               </div>
             </div>
           );
         })}
+
         {filteredResults.length === 0 && (
-          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '32px', color: 'var(--on-surface-variant)' }}>
-            No engines found matching this filter.
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '48px', color: 'var(--on-surface-variant)' }} className="font-data-mono">
+            No security engines match your search or filter.
           </div>
         )}
       </div>

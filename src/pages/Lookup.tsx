@@ -6,6 +6,8 @@ import { EngineGrid } from '../components/EngineGrid';
 import { RelationsCard } from '../components/RelationsCard';
 import { DnsRecordsCard } from '../components/DnsRecordsCard';
 import { CommunityCommentsCard } from '../components/CommunityCommentsCard';
+import { sanitizeUrl, isTelecomCarrier } from '../utils/sanitize';
+import { CarrierIntelligenceCard } from '../components/CarrierIntelligenceCard';
 
 interface LookupProps {
   type?: 'domain' | 'ip';
@@ -55,7 +57,8 @@ export const Lookup: React.FC<LookupProps> = ({ type }) => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const q = fd.get('q')?.toString().trim();
+    const raw = fd.get('q')?.toString() || '';
+    const q = sanitizeUrl(raw).toLowerCase().replace(/^https?:\/\//, '').split('/')[0];
     if (q) {
       const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(q) || /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/.test(q);
       navigate(isIp ? `/ip-address/${encodeURIComponent(q)}` : `/domain/${encodeURIComponent(q)}`);
@@ -88,7 +91,10 @@ export const Lookup: React.FC<LookupProps> = ({ type }) => {
               className="input-field font-data-mono"
               placeholder="Enter IP (8.8.8.8) or domain (example.com)"
               defaultValue={query || ''}
-              style={{ flex: 1, padding: '16px', fontSize: '16px' }}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck="false"
+              style={{ flex: 1, padding: '16px', fontSize: '15px', textTransform: 'lowercase' }}
             />
             <button type="submit" className="btn-primary" disabled={loading} style={{ padding: '0 32px' }}>
               {loading ? 'SEARCHING...' : 'LOOKUP'}
@@ -144,6 +150,10 @@ export const Lookup: React.FC<LookupProps> = ({ type }) => {
             {/* SUMMARY TAB */}
             {activeTab === 'SUMMARY' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {isTelecomCarrier(result.asOwner || result.network || '', result.network || '') && (
+                  <CarrierIntelligenceCard ipData={result} ip={result.ip} />
+                )}
+
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
 
                   {/* Geolocation */}

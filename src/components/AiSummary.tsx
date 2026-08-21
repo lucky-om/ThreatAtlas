@@ -21,42 +21,28 @@ export const AiSummary: React.FC<AiSummaryProps> = ({ threatData, type }) => {
 
       try {
         const prompt = type === 'file' 
-          ? `You are an expert cybersecurity analyst. Provide a brief, concise, and highly technical summary of the following file threat report in 3-4 sentences. Do not use conversational filler. Focus on key malicious behaviors, signatures, and risk levels.\n\nData: ${JSON.stringify(threatData)}`
+          ? `You are Atlas, the expert cybersecurity intelligence analyst. Provide a brief, concise, and highly technical summary of the following file threat report in 3-4 sentences. Focus on key malicious behaviors, signatures, and risk levels.\n\nData: ${JSON.stringify(threatData)}`
           : type === 'url'
-            ? `You are an expert cybersecurity analyst. Provide a brief, concise, and highly technical summary of the following website/URL threat report in 3-4 sentences. Do not use conversational filler. Focus on phishing, malware distribution, or other malicious activities.\n\nData: ${JSON.stringify(threatData)}`
-            : `You are an expert cybersecurity analyst. Provide a brief, concise, and highly technical summary of the following IP/Domain threat report in 3-4 sentences. Do not use conversational filler. Focus on network reputation, associated malware, and risk levels.\n\nData: ${JSON.stringify(threatData)}`;
+            ? `You are Atlas, the expert cybersecurity intelligence analyst. Provide a brief, concise, and highly technical summary of the following website/URL threat report in 3-4 sentences. Focus on phishing, malware distribution, or other malicious activities.\n\nData: ${JSON.stringify(threatData)}`
+            : `You are Atlas, the expert cybersecurity intelligence analyst. Provide a brief, concise, and highly technical summary of the following IP/Domain threat report in 3-4 sentences. Focus on network reputation, associated malware, and risk levels.\n\nData: ${JSON.stringify(threatData)}`;
 
-        let response = await fetch('/api/gemini/v1beta/models/gemini-flash-latest:generateContent', {
+        const response = await fetch('/api/ai/chat', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: 250, temperature: 0.2 },
+            messages: [
+              { role: 'system', content: 'You are Atlas, an expert cybersecurity threat analyst. Provide a concise, 3-4 sentence technical assessment.' },
+              { role: 'user', content: prompt }
+            ]
           })
         });
 
-        // Handle rate limits by retrying once after 5 seconds
-        if (response.status === 429) {
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          response = await fetch('/api/gemini/v1beta/models/gemini-flash-latest:generateContent', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { maxOutputTokens: 250, temperature: 0.2 },
-            })
-          });
-        }
-
         if (!response.ok) {
-          const errorJson = await response.json().catch(() => ({}));
-          throw new Error(errorJson?.error?.message || 'Failed to generate AI summary.');
+          throw new Error('Failed to generate Atlas AI summary.');
         }
 
         const result = await response.json();
-        const text = result.candidates?.[0]?.content?.parts?.[0]?.text || 'No summary available.';
+        const text = result.reply || 'No summary available.';
         
         if (isMounted) {
           setSummary(text);
@@ -96,13 +82,13 @@ export const AiSummary: React.FC<AiSummaryProps> = ({ threatData, type }) => {
       <div style={{ position: 'relative', zIndex: 1 }}>
         <h3 className="font-label-caps text-primary" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>psychology</span>
-          Neural-X AI Analysis
+          Atlas AI Threat Intelligence
         </h3>
         
         {loading ? (
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', color: 'var(--on-surface-variant)' }}>
             <span className="material-symbols-outlined spin" style={{ fontSize: '16px' }}>sync</span>
-            <span className="font-code-sm">Generating intelligent summary...</span>
+            <span className="font-code-sm">Atlas synthesizing telemetry...</span>
           </div>
         ) : error ? (
           <div className="font-code-sm text-secondary">

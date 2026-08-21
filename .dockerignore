@@ -1,0 +1,47 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# ThreatAtlas — .dockerignore
+# Excludes files that should NOT be copied into the Docker build context.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Dependencies (reinstalled inside Docker)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output (rebuilt inside Docker)
+dist/
+
+# Git history
+.git/
+.gitignore
+.github/
+
+# Secrets — NEVER copy .env into the image; pass via docker-compose environment
+.env
+.env.*
+!.env.example
+
+# Editor and OS artefacts
+.vscode/
+.idea/
+*.swp
+*.swo
+*.DS_Store
+Thumbs.db
+
+# Test and dev files
+test.txt
+*.test.ts
+*.spec.ts
+coverage/
+
+# Docs and assets not needed at runtime
+assets/
+stitch_home.html
+vt-response.json
+
+# Docker files themselves (no need to copy)
+Dockerfile
+docker-compose.yml
+.dockerignore
