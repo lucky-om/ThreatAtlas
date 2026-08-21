@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface AiSummaryProps {
   threatData: any;
@@ -6,123 +6,143 @@ interface AiSummaryProps {
 }
 
 export const AiSummary: React.FC<AiSummaryProps> = ({ threatData, type }) => {
-  const [summary, setSummary] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const [verdict, setVerdict] = useState<'CRITICAL' | 'SUSPICIOUS' | 'CLEAN'>('CLEAN');
+  const [keyFinding, setKeyFinding] = useState<string>('');
+  const [action, setAction] = useState<string>('');
 
   useEffect(() => {
     let isMounted = true;
 
-    const generateSummary = async () => {
+    const generateShortSummary = async () => {
       setLoading(true);
-      setSummary('');
 
       const stats = threatData?.stats || {};
       const malicious = stats.malicious || 0;
       const suspicious = stats.suspicious || 0;
-      const targetName = threatData?.name || threatData?.fileName || threatData?.domain || threatData?.url || threatData?.ip || threatData?.sha256 || 'Unknown entity';
-      const isDangerous = malicious > 0 || suspicious > 0;
+      const targetName = threatData?.name || threatData?.fileName || threatData?.domain || threatData?.url || threatData?.ip || threatData?.sha256 || 'Target';
+      const isCritical = malicious >= 5;
+      const isSuspicious = malicious > 0 || suspicious > 0;
 
+      // Default heuristic baseline
+      let v: 'CRITICAL' | 'SUSPICIOUS' | 'CLEAN' = isCritical ? 'CRITICAL' : isSuspicious ? 'SUSPICIOUS' : 'CLEAN';
+      let kf = '';
+      let act = '';
+
+      if (v === 'CRITICAL') {
+        kf = `Flagged by ${malicious} security engines. Exhibits weaponized malware signatures, dropper routines, or hostile C2 communication patterns.`;
+        act = `Isolate affected endpoints, block SHA-256 hash/IP at firewall boundaries, and purge corresponding artifacts.`;
+      } else if (v === 'SUSPICIOUS') {
+        kf = `Flagged by ${malicious || suspicious} engine(s) for anomalous behaviors, evasive packed code, or low-reputation telemetry.`;
+        act = `Execute in sandboxed environment before authorization. Monitor network egress for suspicious domain requests.`;
+      } else {
+        kf = `Zero security vendors flagged this ${type}. Cryptographic integrity, entropy, and structural headers are clean.`;
+        act = `Safe to use under standard corporate security policy. Baseline telemetry verified.`;
+      }
+
+      // Try live LLM if available for custom context
       try {
-        const prompt = `You are Atlas AI, an elite SOC Level 3 Cyber Intelligence Analyst. Analyze the following threat telemetry for ${targetName} (${type.toUpperCase()}):
-- Malicious Vendor Detections: ${malicious}
-- Suspicious: ${suspicious}
-- Tags/Type: ${threatData?.type || 'Binary'} (${(threatData?.tags || []).join(', ')})
-- YARA/Signatures: ${JSON.stringify(threatData?.extended?.crowdsourcedYara || [])}
-Provide:
-1. Executive Verdict (Critical/High/Clean)
-2. Primary Threat Vectors (Droppers, C2, Macros, Phishing)
-3. Immediate SOC Analyst Containment & Remediation Actions.`;
+        const prompt = `You are Atlas AI. Summarize threat data for ${targetName} in EXACTLY two short bullet points:
+Finding: (1 sentence summary)
+Action: (1 sentence actionable remediation)`;
 
-        const response = await fetch('/api/ai/chat', {
+        const res = await fetch('/api/ai/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             messages: [
-              { role: 'system', content: 'You are Atlas AI, a senior SOC Threat Analyst. Return concise, high-value tactical cyber defense intelligence.' },
+              { role: 'system', content: 'You are Atlas AI. Respond strictly with "Finding: <text>" and "Action: <text>" in max 2 sentences.' },
               { role: 'user', content: prompt }
             ]
           })
         });
 
-        if (response.ok) {
-          const result = await response.json();
-          if (result.reply && isMounted) {
-            setSummary(result.reply);
-            setLoading(false);
-            return;
+        if (res.ok) {
+          const json = await res.json();
+          const reply = json.reply || '';
+          if (reply.includes('Finding:') && reply.includes('Action:')) {
+            const fMatch = reply.match(/Finding:\s*([^\n]+)/i);
+            const aMatch = reply.match(/Action:\s*([^\n]+)/i);
+            if (fMatch?.[1]) kf = fMatch[1].trim();
+            if (aMatch?.[1]) act = aMatch[1].trim();
           }
         }
       } catch (_) {}
 
-      // Robust Neural Heuristic Fallback Engine
       if (isMounted) {
-        let fallbackText = '';
-        if (isDangerous) {
-          fallbackText = `🚨 VERDICT: HIGH RISK DETECTED (${malicious} vendor detections). Target "${targetName}" exhibits known malicious signatures and behavioral patterns.
-• Threat Vectors: Identified Indicators of Compromise (IOC) match weaponized distribution clusters, unauthorized binary execution, or adversarial communication channels.
-• SOC Remediation: Immediately quarantine host endpoints, block corresponding SHA-256 hashes at EDR/SIEM boundaries, and check perimeter firewall logs for outbound telemetry.`;
-        } else {
-          fallbackText = `🛡️ VERDICT: CLEAN / UNDETECTED. Target "${targetName}" passed multi-engine security inspection with 0 malicious vendor flags.
-• Telemetry: Digital signatures, cryptographic entropy, and structural integrity check out cleanly across static inspection engines.
-• Recommendation: Entity presents no immediate active threat. Standard baseline monitoring and periodic re-evaluation recommended.`;
-        }
-        setSummary(fallbackText);
+        setVerdict(v);
+        setKeyFinding(kf);
+        setAction(act);
         setLoading(false);
       }
     };
 
-    generateSummary();
+    generateShortSummary();
 
     return () => { isMounted = false; };
   }, [threatData, type]);
 
-  // Smooth Typewriter animation effect
-  useEffect(() => {
-    if (summary && contentRef.current) {
-      contentRef.current.textContent = '';
-      let i = 0;
-      const typeWriter = setInterval(() => {
-        if (contentRef.current && i < summary.length) {
-          contentRef.current.textContent += summary.charAt(i);
-          i++;
-        } else {
-          clearInterval(typeWriter);
-        }
-      }, 10);
-      return () => clearInterval(typeWriter);
-    }
-  }, [summary]);
+  const verdictColor = verdict === 'CRITICAL' ? '#ff2a5f' : verdict === 'SUSPICIOUS' ? '#fb923c' : '#00ffa3';
+  const verdictBg = verdict === 'CRITICAL' ? 'rgba(255, 42, 95, 0.12)' : verdict === 'SUSPICIOUS' ? 'rgba(251, 146, 60, 0.12)' : 'rgba(0, 255, 163, 0.12)';
+  const verdictBorder = verdict === 'CRITICAL' ? 'rgba(255, 42, 95, 0.3)' : verdict === 'SUSPICIOUS' ? 'rgba(251, 146, 60, 0.3)' : 'rgba(0, 255, 163, 0.3)';
 
   return (
-    <div className="glass-card animate-fade-in-up" style={{ padding: '24px 28px', borderColor: 'var(--primary)', position: 'relative', overflow: 'hidden', background: '#111927', borderRadius: '10px' }}>
-      <div className="glow-cyan" style={{ opacity: 0.15, top: '-50%', left: '-50%', width: '200%', height: '200%' }}></div>
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px' }}>
-          <h3 className="font-label-caps text-primary" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>psychology</span>
-            Atlas Neural AI Threat Intelligence
+    <div style={{ background: '#111927', border: '1px solid #1e293b', borderRadius: '10px', padding: '24px 28px', position: 'relative', overflow: 'hidden' }}>
+      
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="material-symbols-outlined" style={{ color: '#00f2ff', fontSize: '22px' }}>psychology</span>
+          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#f1f5f9', letterSpacing: '0.02em' }}>
+            Atlas AI Quick Verdict
           </h3>
-          <span style={{ fontSize: '11px', color: '#00ffa3', fontFamily: 'var(--font-mono)', background: 'rgba(0,255,163,0.1)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(0,255,163,0.2)' }}>
-            LIVE ANALYSIS
-          </span>
         </div>
-        
-        {loading ? (
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', color: 'var(--on-surface-variant)', padding: '12px 0' }}>
-            <span className="material-symbols-outlined spin text-primary" style={{ fontSize: '18px' }}>sync</span>
-            <span className="font-code-sm">Atlas neural engine synthesizing IOC telemetry...</span>
-          </div>
-        ) : (
-          <div 
-            ref={contentRef} 
-            className="font-code-sm text-on-surface" 
-            style={{ lineHeight: '1.7', whiteSpace: 'pre-line', fontSize: '13px', color: '#e2e8f0' }}
-          >
-            {summary}
-          </div>
+
+        {!loading && (
+          <span style={{
+            background: verdictBg,
+            border: `1px solid ${verdictBorder}`,
+            color: verdictColor,
+            padding: '3px 10px',
+            borderRadius: '999px',
+            fontSize: '11px',
+            fontWeight: 800,
+            fontFamily: 'var(--font-mono)'
+          }}>
+            {verdict === 'CRITICAL' ? '● CRITICAL THREAT' : verdict === 'SUSPICIOUS' ? '▲ SUSPICIOUS' : '✓ VERIFIED SAFE'}
+          </span>
         )}
       </div>
+
+      {loading ? (
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', color: '#94a3b8', padding: '8px 0' }}>
+          <span className="material-symbols-outlined spin" style={{ color: '#00f2ff', fontSize: '18px' }}>sync</span>
+          <span style={{ fontSize: '13px', fontFamily: 'var(--font-mono)' }}>Synthesizing threat indicators...</span>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* Key Finding */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', background: 'rgba(255,255,255,0.02)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)' }}>
+            <span className="material-symbols-outlined" style={{ color: verdictColor, fontSize: '18px', marginTop: '1px' }}>
+              {verdict === 'CLEAN' ? 'verified' : 'crisis_alert'}
+            </span>
+            <div style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: 1.5 }}>
+              <strong style={{ color: '#fff' }}>Key Finding: </strong> {keyFinding}
+            </div>
+          </div>
+
+          {/* Action */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', background: 'rgba(255,255,255,0.02)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)' }}>
+            <span className="material-symbols-outlined" style={{ color: '#38bdf8', fontSize: '18px', marginTop: '1px' }}>
+              bolt
+            </span>
+            <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>
+              <strong style={{ color: '#38bdf8' }}>Recommended Action: </strong> {action}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

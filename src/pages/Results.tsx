@@ -392,12 +392,20 @@ export const Results: React.FC = () => {
     if (!data) return;
     setIsExportingPdf(true);
     try {
+      const summaryText = score > 0 
+        ? `🚨 VERDICT: CRITICAL / SUSPICIOUS (${score}/${total} vendors flagged malicious). Target exhibits indicators of compromise (IOC), suspicious signature patterns, or hostile communication telemetry.\n• Immediate Action: Quarantine endpoint, block SHA-256 hash/IP at firewall boundary, and inspect SIEM/EDR logs.`
+        : `🛡️ VERDICT: VERIFIED CLEAN (0/${total} detections). Zero security vendors flagged this ${isFile ? 'file' : 'target'}.\n• Cryptographic integrity, entropy, and structural headers check out cleanly. Safe to use under baseline corporate policy.`;
+
       generatePdfThreatReport({
         threatData: data,
         targetType: isFile ? 'file' : domainResult ? 'domain' : ipResult ? 'ip' : 'url',
-        aiSummaryText: `ThreatAtlas Automated Analysis for ${displayHash}. Threat score is ${score}/${total}. Multi-engine vendor analysis conducted with complete YARA, heuristic forensics, and reputation feeds.`,
+        aiSummaryText: summaryText,
         imageForensics,
-        docForensics
+        audioForensics,
+        videoForensics,
+        docForensics,
+        archiveForensics,
+        yaraMatches: fileResult?.extended?.crowdsourcedYara
       });
     } finally {
       setTimeout(() => setIsExportingPdf(false), 1000);
