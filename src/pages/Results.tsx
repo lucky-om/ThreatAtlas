@@ -55,7 +55,9 @@ export const Results: React.FC = () => {
   const rawTarget = pathId || pathHash || pathQuery || searchParams.get('id') || searchParams.get('hash') || searchParams.get('q') || searchParams.get('query') || '';
 
   const [loading, setLoading] = useState(true);
-  const [scanStep, setScanStep] = useState<number>(1);
+  const [elapsedSec, setElapsedSec] = useState<number>(0);
+  const [liveStage, setLiveStage] = useState<string>('Initializing threat intelligence handshake...');
+  const [liveEngineCount, setLiveEngineCount] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
 
   const [analysisResult, setAnalysisResult] = useState<NormalizedAnalysis | null>(null);
@@ -107,7 +109,9 @@ export const Results: React.FC = () => {
   const executeUnifiedScan = async (forceFresh = false) => {
     setLoading(true);
     setError(null);
-    setScanStep(1);
+    setElapsedSec(0);
+    setLiveEngineCount(0);
+    setLiveStage('Initializing threat intelligence handshake...');
 
     const target = rawTarget.trim();
     if (!target) {
@@ -141,14 +145,15 @@ export const Results: React.FC = () => {
       }
     }
 
-    // Smooth step updates for pipeline visibility (caps at 4 until complete)
-    const stepTimer = setInterval(() => {
-      setScanStep(s => (s < 4 ? s + 1 : s));
-    }, 600);
+    const startTs = Date.now();
+    const elapsedTimer = setInterval(() => {
+      setElapsedSec(Math.floor((Date.now() - startTs) / 1000));
+    }, 1000);
 
     try {
       // ── 1. Cryptographic Hash Search (Direct File Lookup) ─────────────────
       if (isHash) {
+        setLiveStage('Querying global multi-vendor antivirus database for hash signatures...');
         const [fileData, behaviorRes] = await Promise.allSettled([
           lookupHash(target),
           fetch(`/api/vt/files/${target}/behaviours?limit=5`).then(r => r.ok ? r.json() : null)
@@ -158,7 +163,6 @@ export const Results: React.FC = () => {
           const data = fileData.value;
           setFileResult(data);
           setCachedItem(target, data);
-          setScanStep(5);
 
           if (behaviorRes.status === 'fulfilled' && behaviorRes.value) {
             setBehaviorData(behaviorRes.value);
@@ -184,18 +188,18 @@ export const Results: React.FC = () => {
 
       // ── 2. VirusTotal Analysis Token (Fresh File or URL Scan) ──────────────
       if (isAnalysisToken) {
+        setLiveStage('Live engine pipeline active — streaming VirusTotal vendor verdicts...');
         // Stream live engine results as they arrive
         const analysisData = await pollAnalysis(target, (progress) => {
           setAnalysisResult(progress);
-          if (progress.status === 'completed') {
-            setScanStep(5);
-          } else {
-            setScanStep(s => Math.max(s, 3));
+          const count = progress.engines?.length || 0;
+          setLiveEngineCount(count);
+          if (count > 0) {
+            setLiveStage(`Received live telemetry from ${count} security engines...`);
           }
         });
         setAnalysisResult(analysisData);
         setCachedItem(target, analysisData);
-        setScanStep(5);
 
         if (analysisData.hash || (!analysisData.url && analysisData.fileName)) {
           const fallbackHash = analysisData.hash || target;
@@ -248,22 +252,21 @@ export const Results: React.FC = () => {
             } catch (_) {}
           }
         } else {
-          const effectiveUrl = analysisData.url || (analysisData.extended?.httpResponse?.finalUrl) || target;
           addScanHistoryItem({
             id: analysisData.id || target,
-            target: effectiveUrl,
+            target: analysisData.url || target,
             type: 'url',
-            name: effectiveUrl,
-            verdict: analysisData.verdict || (analysisData.stats?.malicious > 0 ? 'malicious' : 'clean'),
+            name: analysisData.url || target,
+            verdict: analysisData.verdict || ((analysisData.stats?.malicious || 0) > 0 ? 'malicious' : 'clean'),
             threatScore: analysisData.stats?.malicious || 0,
             maliciousCount: analysisData.stats?.malicious || 0,
             totalEngines: analysisData.engines?.length || 70
           });
 
-          if (effectiveUrl && effectiveUrl.startsWith('http')) {
-            setPhishResult(analyzeWithPhishGuard(effectiveUrl));
+          if (analysisData.url) {
+            setPhishResult(analyzeWithPhishGuard(analysisData.url));
             setIsWebfoxLoading(true);
-            runWebFoxRecon(effectiveUrl)
+            runWebFoxRecon(analysisData.url)
               .then(wf => setWebfoxResult(wf))
               .catch(() => {})
               .finally(() => setIsWebfoxLoading(false));
@@ -274,6 +277,7 @@ export const Results: React.FC = () => {
 
       // ── 3. IP Address Search ──────────────────────────────────────────────
       if (isIp) {
+        setLiveStage('Resolving IP geolocation, ASN routing, and threat feeds...');
         const ipData = await lookupIpGeo(target);
         setIpResult(ipData);
         setCachedItem(target, ipData);
@@ -294,6 +298,7 @@ export const Results: React.FC = () => {
       // ── 4. Domain Name Search ─────────────────────────────────────────────
       const isPlainDomain = detected === 'domain' || (/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(target) && !target.includes('/'));
       if (isPlainDomain) {
+        setLiveStage('Querying authoritative DNS records, RDAP WHOIS, and SSL certificates...');
         const targetUrl = `https://${target}`;
         setPhishResult(analyzeWithPhishGuard(targetUrl));
         setIsWebfoxLoading(true);
@@ -320,6 +325,7 @@ export const Results: React.FC = () => {
       }
 
       // ── 5. URL Search / Direct Submission ─────────────────────────────────
+      setLiveStage('Evaluating URL structure, HTTP response headers, and phishing telemetry...');
       const targetUrl = target.startsWith('http') ? target : `https://${target}`;
       setPhishResult(analyzeWithPhishGuard(targetUrl));
       setIsWebfoxLoading(true);
@@ -344,26 +350,25 @@ export const Results: React.FC = () => {
           totalEngines: report.engines?.length || 70
         });
       } catch (_) {
+        setLiveStage('URL queued in global pipeline — polling multi-engine scanners...');
         const scanRes = await scanUrl(targetUrl);
         if (scanRes?.data?.id) {
           const data = await pollAnalysis(scanRes.data.id, (progress) => {
             setAnalysisResult(progress);
-            if (progress.status === 'completed') {
-              setScanStep(5);
-            } else {
-              setScanStep(s => Math.max(s, 3));
+            const count = progress.engines?.length || 0;
+            setLiveEngineCount(count);
+            if (count > 0) {
+              setLiveStage(`Received live telemetry from ${count} security engines...`);
             }
           });
           setAnalysisResult(data);
           setCachedItem(target, data);
-          setScanStep(5);
         }
       }
     } catch (err: any) {
       setError(err.message || 'Threat scan failed. Please verify the target.');
     } finally {
-      clearInterval(stepTimer);
-      setScanStep(5);
+      clearInterval(elapsedTimer);
       setLoading(false);
     }
   };
@@ -382,13 +387,7 @@ export const Results: React.FC = () => {
   );
 
   if (loading && !hasAnyData) {
-    const steps = [
-      { id: 1, label: 'Multi-Vendor Antivirus Matrix (70+ Engines)', desc: 'Querying global threat intelligence signatures' },
-      { id: 2, label: 'Target Category Protocol Inspection', desc: 'Evaluating protocol structures, headers, and certificates' },
-      { id: 3, label: 'Specialized Telemetry & Forensics Engine', desc: 'Running dedicated category heuristics and anomaly detection' },
-      { id: 4, label: 'Network Recon & Threat Feed Aggregator', desc: 'Cross-referencing AbuseIPDB, AlienVault OTX, and DNS records' },
-      { id: 5, label: 'Atlas Neural AI Threat Synthesizer', desc: 'Synthesizing final executive verdict and remediation steps' }
-    ];
+    const isAnalysis = rawTarget.startsWith('u-') || rawTarget.includes(':') || (rawTarget.length >= 44 && !isValidHash(rawTarget));
 
     return (
       <div style={{ position: 'relative', minHeight: '100vh', paddingTop: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#0b111e', color: '#c3c8d4' }}>
@@ -403,74 +402,77 @@ export const Results: React.FC = () => {
             padding: '36px 32px',
             boxShadow: '0 20px 50px rgba(0,0,0,0.8)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '16px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '18px' }}>
               <span className="material-symbols-outlined spin text-primary" style={{ fontSize: '32px' }}>sync</span>
-              <div>
-                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: '#f1f5f9' }}>
-                  Unified Threat Intelligence Pipeline
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#f1f5f9' }}>
+                  Live Multi-Engine Threat Scan
                 </h2>
-                <div style={{ fontSize: '12px', color: '#64748b', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
-                  Target: {rawTarget.slice(0, 36)}{rawTarget.length > 36 ? '...' : ''}
+                <div style={{ fontSize: '12px', color: '#64748b', fontFamily: 'var(--font-mono)', marginTop: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  Target: <span style={{ color: '#cbd5e1' }}>{rawTarget}</span>
                 </div>
               </div>
             </div>
 
-            {/* Steps Progress List */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {steps.map((s) => {
-                const isDone = scanStep > s.id;
-                const isCurrent = scanStep === s.id;
-                return (
-                  <div key={s.id} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    background: isCurrent ? 'rgba(0, 242, 255, 0.05)' : 'rgba(255,255,255,0.02)',
-                    border: isCurrent ? '1px solid rgba(0, 242, 255, 0.3)' : '1px solid rgba(255,255,255,0.04)',
-                    transition: 'all 0.2s ease'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      {isDone ? (
-                        <span className="material-symbols-outlined" style={{ color: '#00ffa3', fontSize: '20px' }}>check_circle</span>
-                      ) : isCurrent ? (
-                        <span className="material-symbols-outlined spin" style={{ color: '#00f2ff', fontSize: '20px' }}>progress_activity</span>
-                      ) : (
-                        <span className="material-symbols-outlined" style={{ color: '#475569', fontSize: '20px' }}>radio_button_unchecked</span>
-                      )}
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: 600, color: isCurrent ? '#00f2ff' : isDone ? '#f1f5f9' : '#64748b' }}>
-                          {s.label}
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'var(--font-mono)' }}>
-                          {s.desc}
-                        </div>
-                      </div>
-                    </div>
-
-                    <span style={{
-                      fontSize: '11px',
-                      fontFamily: 'var(--font-mono)',
-                      color: isDone ? '#00ffa3' : isCurrent ? '#00f2ff' : '#475569',
-                      fontWeight: 700
-                    }}>
-                      {isDone ? 'COMPLETED' : isCurrent ? 'RUNNING' : 'QUEUED'}
-                    </span>
-                  </div>
-                );
-              })}
+            {/* Current Real Active Stage */}
+            <div style={{
+              background: 'rgba(0, 242, 255, 0.04)',
+              border: '1px solid rgba(0, 242, 255, 0.2)',
+              borderRadius: '8px',
+              padding: '16px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '20px'
+            }}>
+              <span className="material-symbols-outlined spin" style={{ color: '#00f2ff', fontSize: '20px' }}>
+                progress_activity
+              </span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '11px', color: '#00f2ff', fontWeight: 700, fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>
+                  ACTIVE PIPELINE OPERATION
+                </div>
+                <div style={{ fontSize: '13px', color: '#f1f5f9', fontWeight: 600, marginTop: '2px' }}>
+                  {liveStage}
+                </div>
+              </div>
             </div>
 
-            {/* Bottom Progress Bar */}
-            <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#94a3b8', fontFamily: 'var(--font-mono)', marginBottom: '6px' }}>
-                <span>Streaming live telemetry from security engines...</span>
-                <span>{Math.min(100, scanStep * 20)}%</span>
+            {/* Real Timers & Status Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+              {/* Elapsed Timer */}
+              <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '12px 14px' }}>
+                <div style={{ fontSize: '10px', color: '#64748b', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>Elapsed Time</div>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#f1f5f9', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
+                  {elapsedSec}s
+                </div>
               </div>
-              <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '999px', overflow: 'hidden' }}>
-                <div style={{ width: `${Math.min(100, scanStep * 20)}%`, height: '100%', background: 'linear-gradient(90deg, #00f2ff, #b942ff)', transition: 'width 0.3s ease' }}></div>
+
+              {/* Estimated Time */}
+              <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '12px 14px' }}>
+                <div style={{ fontSize: '10px', color: '#64748b', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>Estimated Duration</div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: '#38bdf8', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
+                  {isAnalysis ? '~10–25s (Queue)' : '~2–5s (Instant)'}
+                </div>
               </div>
+
+              {/* Engine Telemetry */}
+              <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '12px 14px' }}>
+                <div style={{ fontSize: '10px', color: '#64748b', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>Engine Responses</div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: liveEngineCount > 0 ? '#00ffa3' : '#94a3b8', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
+                  {liveEngineCount > 0 ? `${liveEngineCount} reported` : '70+ Antivirus Nodes'}
+                </div>
+              </div>
+            </div>
+
+            {/* Protocol Notice */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', fontFamily: 'var(--font-mono)', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '14px', color: '#00ffa3' }}>lock</span>
+                TLS Session Encrypted
+              </div>
+              <div>VirusTotal v3 REST Gateway</div>
             </div>
 
           </div>
