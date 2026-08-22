@@ -134,6 +134,10 @@ export function getFileCategory(fileResult?: NormalizedFile | null, rawTarget?: 
   const magic = (fileResult?.extended?.magic || '').toLowerCase();
   const magika = (fileResult?.extended?.magika || '').toLowerCase();
   const tags = (fileResult?.tags || []).map(t => t.toLowerCase());
+  
+  const exif = fileResult?.extended?.exiftool || {};
+  const exifFileType = (exif['FileType'] || exif['FileTypeExtension'] || '').toLowerCase();
+  const exifMime = (exif['MIMEType'] || '').toLowerCase();
 
   // 1. Executable / PE / ELF / Mach-O
   if (
@@ -148,18 +152,23 @@ export function getFileCategory(fileResult?: NormalizedFile | null, rawTarget?: 
     magic.includes('elf') ||
     mime.includes('x-dosexec') ||
     mime.includes('x-executable') ||
+    exifFileType === 'exe' || exifFileType === 'dll' ||
     ['.exe', '.dll', '.sys', '.scr', '.elf', '.so', '.dylib'].some(e => fileName.endsWith(e))
   ) {
     return 'executable';
   }
 
-  // 2. Image formats
+  // 2. Image formats (EXIF, MIME, Magic, Magika, FileType)
   if (
     mime.startsWith('image/') ||
+    exifMime.startsWith('image/') ||
+    ['jpeg', 'jpg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'tif', 'svg', 'ico', 'heic', 'raw', 'cr2', 'nef'].includes(exifFileType) ||
     tags.some(t => ['image', 'jpeg', 'jpg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff'].includes(t)) ||
-    ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif', '.svg', '.ico', '.heic', '.raw'].some(e => fileName.endsWith(e)) ||
-    type.includes('jpeg') || type.includes('png') || type.includes('gif') || type.includes('bitmap') ||
-    magika === 'jpeg' || magika === 'png' || magika === 'gif' || magika === 'webp'
+    ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif', '.svg', '.ico', '.heic', '.raw', '.cr2', '.nef'].some(e => fileName.endsWith(e)) ||
+    type.includes('jpeg') || type.includes('png') || type.includes('gif') || type.includes('bitmap') || type.includes('image') ||
+    magic.includes('jpeg') || magic.includes('jfif') || magic.includes('png') || magic.includes('gif') || magic.includes('bitmap') ||
+    magika === 'jpeg' || magika === 'png' || magika === 'gif' || magika === 'webp' ||
+    (exif['ImageWidth'] && exif['ImageHeight'])
   ) {
     return 'image';
   }
@@ -167,9 +176,12 @@ export function getFileCategory(fileResult?: NormalizedFile | null, rawTarget?: 
   // 3. Audio formats
   if (
     mime.startsWith('audio/') ||
+    exifMime.startsWith('audio/') ||
+    ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma', 'aiff', 'opus'].includes(exifFileType) ||
     tags.some(t => ['audio', 'mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma'].includes(t)) ||
     ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.wma', '.aiff', '.mid', '.midi', '.opus'].some(e => fileName.endsWith(e)) ||
     type.includes('audio') || type.includes('mp3') || type.includes('wave') || type.includes('flac') ||
+    magic.includes('audio') || magic.includes('mp3') || magic.includes('wave') ||
     magika === 'mp3' || magika === 'wav' || magika === 'flac' || magika === 'ogg'
   ) {
     return 'audio';
@@ -178,9 +190,12 @@ export function getFileCategory(fileResult?: NormalizedFile | null, rawTarget?: 
   // 4. Video formats
   if (
     mime.startsWith('video/') ||
+    exifMime.startsWith('video/') ||
+    ['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'wmv', 'm4v', 'ts', '3gp'].includes(exifFileType) ||
     tags.some(t => ['video', 'mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'wmv'].includes(t)) ||
     ['.mp4', '.mkv', '.avi', '.mov', '.webm', '.flv', '.wmv', '.m4v', '.ts', '.3gp'].some(e => fileName.endsWith(e)) ||
     type.includes('video') || type.includes('mp4') || type.includes('matroska') || type.includes('quicktime') ||
+    magic.includes('video') || magic.includes('mp4') || magic.includes('matroska') ||
     magika === 'mp4' || magika === 'mkv' || magika === 'avi' || magika === 'webm'
   ) {
     return 'video';
@@ -194,9 +209,12 @@ export function getFileCategory(fileResult?: NormalizedFile | null, rawTarget?: 
     mime.includes('msword') ||
     mime.includes('officedocument') ||
     mime.includes('document') ||
+    exifMime.includes('pdf') || exifMime.includes('word') || exifMime.includes('officedocument') ||
+    ['pdf', 'docx', 'doc', 'xlsx', 'xls', 'pptx', 'ppt', 'odt', 'rtf', 'epub', 'csv'].includes(exifFileType) ||
     ['.pdf', '.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt', '.odt', '.rtf', '.epub', '.csv'].some(e => fileName.endsWith(e)) ||
     tags.some(t => ['pdf', 'document', 'docx', 'xlsx', 'pptx', 'office', 'vba', 'macro'].includes(t)) ||
     type.includes('pdf') || type.includes('word') || type.includes('excel') || type.includes('powerpoint') ||
+    magic.includes('pdf') || magic.includes('composite document') || magic.includes('word') ||
     magika === 'pdf' || magika === 'docx' || magika === 'doc' || magika === 'xlsx' || magika === 'pptx'
   ) {
     return 'document';
@@ -211,9 +229,12 @@ export function getFileCategory(fileResult?: NormalizedFile | null, rawTarget?: 
     mime.includes('x-rar') ||
     mime.includes('x-7z') ||
     mime.includes('iso9660') ||
+    exifMime.includes('zip') || exifMime.includes('compressed') ||
+    ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'iso'].includes(exifFileType) ||
     ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.xz', '.iso', '.cab', '.jar', '.apk'].some(e => fileName.endsWith(e)) ||
     tags.some(t => ['zip', 'archive', 'rar', '7z', 'tar', 'iso', 'compressed'].includes(t)) ||
     type.includes('zip') || type.includes('archive') || type.includes('rar') || type.includes('tar') ||
+    magic.includes('zip') || magic.includes('archive') || magic.includes('gzip') ||
     magika === 'zip' || magika === 'rar' || magika === '7z' || magika === 'tar' || magika === 'gzip'
   ) {
     return 'archive';

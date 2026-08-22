@@ -191,32 +191,56 @@ export const Results: React.FC = () => {
         setAnalysisResult(analysisData);
         setCachedItem(target, analysisData);
 
-        if (analysisData.hash) {
-          try {
-            const [fullFileData, behaviorRes] = await Promise.allSettled([
-              lookupHash(analysisData.hash),
-              fetch(`/api/vt/files/${analysisData.hash}/behaviours?limit=5`).then(r => r.ok ? r.json() : null)
-            ]);
+        if (analysisData.hash || (!analysisData.url && analysisData.fileName)) {
+          const fallbackHash = analysisData.hash || target;
+          const fallbackFile: NormalizedFile = {
+            id: fallbackHash,
+            sha256: fallbackHash,
+            sha1: '',
+            md5: '',
+            name: analysisData.fileName || 'Sample File',
+            names: analysisData.fileName ? [analysisData.fileName] : ['Sample File'],
+            size: analysisData.fileSize || 0,
+            type: analysisData.fileName ? analysisData.fileName.split('.').pop()?.toUpperCase() || 'File' : 'File',
+            mimeType: '',
+            firstSeen: analysisData.date || Math.floor(Date.now() / 1000),
+            lastSeen: analysisData.date || Math.floor(Date.now() / 1000),
+            timesSubmitted: 1,
+            verdict: analysisData.verdict,
+            stats: analysisData.stats,
+            tags: [],
+            engines: analysisData.engines,
+            extended: analysisData.extended
+          };
+          setFileResult(fallbackFile);
 
-            if (fullFileData.status === 'fulfilled') {
-              setFileResult(fullFileData.value);
-              setCachedItem(analysisData.hash, fullFileData.value);
-              if (behaviorRes.status === 'fulfilled' && behaviorRes.value) setBehaviorData(behaviorRes.value);
+          if (analysisData.hash) {
+            try {
+              const [fullFileData, behaviorRes] = await Promise.allSettled([
+                lookupHash(analysisData.hash),
+                fetch(`/api/vt/files/${analysisData.hash}/behaviours?limit=5`).then(r => r.ok ? r.json() : null)
+              ]);
 
-              addScanHistoryItem({
-                id: fullFileData.value.id || analysisData.hash,
-                target: analysisData.hash,
-                type: 'file',
-                name: fullFileData.value.name || fullFileData.value.names?.[0] || 'Sample File',
-                hash: fullFileData.value.sha256,
-                verdict: fullFileData.value.verdict || (fullFileData.value.stats?.malicious > 0 ? 'malicious' : 'clean'),
-                threatScore: fullFileData.value.stats?.malicious || 0,
-                maliciousCount: fullFileData.value.stats?.malicious || 0,
-                totalEngines: fullFileData.value.engines?.length || 70,
-                fileSize: fullFileData.value.size
-              });
-            }
-          } catch (_) {}
+              if (fullFileData.status === 'fulfilled') {
+                setFileResult(fullFileData.value);
+                setCachedItem(analysisData.hash, fullFileData.value);
+                if (behaviorRes.status === 'fulfilled' && behaviorRes.value) setBehaviorData(behaviorRes.value);
+
+                addScanHistoryItem({
+                  id: fullFileData.value.id || analysisData.hash,
+                  target: analysisData.hash,
+                  type: 'file',
+                  name: fullFileData.value.name || fullFileData.value.names?.[0] || 'Sample File',
+                  hash: fullFileData.value.sha256,
+                  verdict: fullFileData.value.verdict || (fullFileData.value.stats?.malicious > 0 ? 'malicious' : 'clean'),
+                  threatScore: fullFileData.value.stats?.malicious || 0,
+                  maliciousCount: fullFileData.value.stats?.malicious || 0,
+                  totalEngines: fullFileData.value.engines?.length || 70,
+                  fileSize: fullFileData.value.size
+                });
+              }
+            } catch (_) {}
+          }
         } else {
           const effectiveUrl = analysisData.url || (analysisData.extended?.httpResponse?.finalUrl) || target;
           addScanHistoryItem({
