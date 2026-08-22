@@ -54,10 +54,13 @@ export const Navbar: React.FC = () => {
         </div>
 
         {/* Desktop Navigation */}
-        <div className="nav-links font-label-caps" style={{ display: 'flex', alignItems: 'center' }}>
+        <div className="nav-links font-label-caps" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
           <Link to="/" className={location.pathname === '/' || location.pathname.includes('/file') || location.pathname.includes('/upload') ? 'active' : ''}>FILE</Link>
           <Link to="/url" className={location.pathname.includes('/url') ? 'active' : ''}>URL</Link>
           <Link to="/search" className={location.pathname.includes('/search') || location.pathname.includes('/lookup') || location.pathname.includes('/ip-address') || location.pathname.includes('/domain') ? 'active' : ''}>SEARCH</Link>
+          <Link to="/threat-graph" className={location.pathname.includes('/threat-graph') ? 'active' : ''}>GRAPH</Link>
+          <Link to="/ioc-hunter" className={location.pathname.includes('/ioc-hunter') ? 'active' : ''}>IOC HUNTER</Link>
+          <Link to="/yara" className={location.pathname.includes('/yara') ? 'active' : ''}>YARA</Link>
           <Link to="/about" className={location.pathname.includes('/about') ? 'active' : ''}>ABOUT</Link>
 
           {/* History Button */}
@@ -229,9 +232,12 @@ export const Navbar: React.FC = () => {
             )}
 
             {[
-              { path: '/', label: 'FILE', icon: 'upload_file' },
-              { path: '/url', label: 'URL', icon: 'link' },
-              { path: '/search', label: 'SEARCH', icon: 'search' },
+              { path: '/', label: 'FILE SCAN', icon: 'upload_file' },
+              { path: '/url', label: 'URL SCAN', icon: 'link' },
+              { path: '/search', label: 'SEARCH / LOOKUP', icon: 'search' },
+              { path: '/threat-graph', label: 'THREAT GRAPH', icon: 'hub' },
+              { path: '/ioc-hunter', label: 'IOC HUNTER', icon: 'radar' },
+              { path: '/yara', label: 'YARA STUDIO', icon: 'code' },
               { path: '/about', label: 'ABOUT', icon: 'info' },
             ].map(link => (
               <Link

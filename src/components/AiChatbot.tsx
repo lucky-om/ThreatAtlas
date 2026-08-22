@@ -120,30 +120,86 @@ export const AiChatbot: React.FC = () => {
     ]);
   };
 
+  const [copiedCodeIdx, setCopiedCodeIdx] = useState<string | null>(null);
+
+  const copyCode = (code: string, id: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCodeIdx(id);
+    setTimeout(() => setCopiedCodeIdx(null), 2000);
+  };
+
+  const QUICK_PROMPTS = [
+    '✨ Write a YARA rule for Cobalt Strike beacon',
+    '🔍 Explain PE header entropy & section packers',
+    '🛡️ How to analyze suspicious image steganography',
+    '💀 WannaCry EternalBlue killswitch breakdown',
+  ];
+
   const renderFormatted = (text: string) => {
-    const lines = text.split('\n');
-    return lines.map((line, idx) => {
-      if (line.startsWith('```')) {
-        return null;
-      }
-      if (line.startsWith('- ') || line.startsWith('* ')) {
-        const item = line.substring(2);
+    // Check for code blocks ```...```
+    const parts = text.split(/(```[\s\S]*?```)/g);
+
+    return parts.map((part, pIdx) => {
+      if (part.startsWith('```') && part.endsWith('```')) {
+        const lines = part.slice(3, -3).trim().split('\n');
+        const lang = lines[0].match(/^[a-zA-Z0-9_-]+$/) ? lines[0] : '';
+        const codeContent = lang ? lines.slice(1).join('\n') : lines.join('\n');
+        const codeId = `code_${pIdx}`;
+
         return (
-          <li key={idx} style={{ marginLeft: '16px', marginBottom: '4px' }}>
-            <span dangerouslySetInnerHTML={{
-              __html: item
-                .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--on-surface)">$1</strong>')
-                .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.08);padding:2px 4px;border-radius:4px;font-family:var(--font-mono);font-size:12px;color:var(--primary)">$1</code>')
-            }} />
-          </li>
+          <div key={pIdx} style={{ margin: '10px 0', background: '#080d16', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '11px', fontFamily: 'var(--font-mono)', color: '#64748b' }}>
+              <span>{lang ? lang.toUpperCase() : 'CODE'}</span>
+              <button
+                onClick={() => copyCode(codeContent, codeId)}
+                style={{ background: 'none', border: 'none', color: copiedCodeIdx === codeId ? '#00ffa3' : '#38bdf8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontFamily: 'var(--font-mono)' }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
+                  {copiedCodeIdx === codeId ? 'check' : 'content_copy'}
+                </span>
+                {copiedCodeIdx === codeId ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+            <pre style={{ margin: 0, padding: '10px 12px', fontSize: '12px', fontFamily: 'var(--font-mono)', color: '#00f2ff', overflowX: 'auto', lineHeight: 1.4 }}>
+              {codeContent}
+            </pre>
+          </div>
         );
       }
+
+      const lines = part.split('\n');
       return (
-        <p key={idx} style={{ marginBottom: line.trim() ? '8px' : '4px' }} dangerouslySetInnerHTML={{
-          __html: line
-            .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--on-surface)">$1</strong>')
-            .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.08);padding:2px 4px;border-radius:4px;font-family:var(--font-mono);font-size:12px;color:var(--primary)">$1</code>')
-        }} />
+        <div key={pIdx}>
+          {lines.map((line, idx) => {
+            if (!line.trim()) return <div key={idx} style={{ height: '4px' }} />;
+
+            if (line.startsWith('### ')) {
+              return <h4 key={idx} style={{ margin: '8px 0 4px', fontSize: '13px', fontWeight: 700, color: '#00f2ff' }}>{line.slice(4)}</h4>;
+            }
+            if (line.startsWith('## ')) {
+              return <h3 key={idx} style={{ margin: '10px 0 4px', fontSize: '14px', fontWeight: 700, color: '#f1f5f9' }}>{line.slice(3)}</h3>;
+            }
+            if (line.startsWith('- ') || line.startsWith('* ')) {
+              const item = line.substring(2);
+              return (
+                <li key={idx} style={{ marginLeft: '16px', marginBottom: '4px' }}>
+                  <span dangerouslySetInnerHTML={{
+                    __html: item
+                      .replace(/\*\*(.*?)\*\*/g, '<strong style="color:#ffffff">$1</strong>')
+                      .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.08);padding:2px 4px;border-radius:4px;font-family:var(--font-mono);font-size:11px;color:#00f2ff">$1</code>')
+                  }} />
+                </li>
+              );
+            }
+            return (
+              <p key={idx} style={{ margin: '0 0 6px 0' }} dangerouslySetInnerHTML={{
+                __html: line
+                  .replace(/\*\*(.*?)\*\*/g, '<strong style="color:#ffffff">$1</strong>')
+                  .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.08);padding:2px 4px;border-radius:4px;font-family:var(--font-mono);font-size:11px;color:#00f2ff">$1</code>')
+              }} />
+            );
+          })}
+        </div>
       );
     });
   };
@@ -294,6 +350,37 @@ export const AiChatbot: React.FC = () => {
             )}
 
             <div ref={messagesEndRef} />
+          </div>
+
+          {/* Quick Threat Prompts Chips */}
+          <div style={{
+            padding: '8px 16px', background: 'rgba(0,0,0,0.3)',
+            borderTop: '1px solid rgba(255,255,255,0.04)',
+            display: 'flex', gap: '6px', overflowX: 'auto', whiteSpace: 'nowrap'
+          }}>
+            {QUICK_PROMPTS.map((qp, qIdx) => (
+              <button
+                key={qIdx}
+                onClick={() => sendMessage(qp)}
+                disabled={loading}
+                style={{
+                  background: 'rgba(185,66,255,0.08)',
+                  border: '1px solid rgba(185,66,255,0.25)',
+                  color: '#cbd5e1',
+                  padding: '4px 10px',
+                  borderRadius: '999px',
+                  fontSize: '11px',
+                  fontFamily: 'var(--font-mono)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#00f2ff'; e.currentTarget.style.color = '#ffffff'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(185,66,255,0.25)'; e.currentTarget.style.color = '#cbd5e1'; }}
+              >
+                {qp}
+              </button>
+            ))}
           </div>
 
           {/* Footer Input Bar */}

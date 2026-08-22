@@ -8,6 +8,10 @@ import { AiChatbot } from './components/AiChatbot';
 import { Home } from './pages/Home';
 import { Results } from './pages/Results';
 import { IpLookup } from './pages/IpLookup';
+import { ThreatGraph } from './pages/ThreatGraph';
+import { IocHunter } from './pages/IocHunter';
+import { YaraScanner } from './pages/YaraScanner';
+import { WebScan } from './pages/WebScan';
 import { About } from './pages/About';
 import { Privacy } from './pages/Privacy';
 import { Terms } from './pages/Terms';
@@ -29,13 +33,19 @@ export const App: React.FC = () => {
 
               <Route path="/url" element={<Home initialTab="url" />} />
               <Route path="/url-scan" element={<Home initialTab="url" />} />
-              <Route path="/webscan" element={<Home initialTab="url" />} />
+              <Route path="/webscan" element={<WebScan />} />
               <Route path="/gui/home/url" element={<Home initialTab="url" />} />
 
               <Route path="/search" element={<Home initialTab="search" />} />
               <Route path="/lookup" element={<Home initialTab="search" />} />
-              <Route path="/ip-lookup" element={<Home initialTab="search" />} />
+              <Route path="/ip-lookup" element={<IpLookup />} />
               <Route path="/gui/home/search" element={<Home initialTab="search" />} />
+
+              {/* Dedicated Cyber Investigation Tools */}
+              <Route path="/threat-graph" element={<ThreatGraph />} />
+              <Route path="/ioc-hunter" element={<IocHunter />} />
+              <Route path="/yara" element={<YaraScanner />} />
+              <Route path="/yara-scanner" element={<YaraScanner />} />
 
               {/* Analysis Results */}
               <Route path="/file/:hash/:tab?" element={<Results />} />
