@@ -663,6 +663,14 @@ export function normalizeAnalysis(data: any): NormalizedAnalysis {
     outgoingLinks: attrs.outgoing_links,
     javascriptVariables: attrs.javascript_variables,
     networkRequests: attrs.network_requests || attrs.last_http_response_requests,
+    crowdsourcedYara: (attrs.crowdsourced_yara_results || data?.data?.attributes?.crowdsourced_yara_results) ? (attrs.crowdsourced_yara_results || data?.data?.attributes?.crowdsourced_yara_results).map((y: any) => ({
+      rule_name: y.rule_name || y.ruleset_name || 'Generic_Rule',
+      ruleset_name: y.ruleset_name,
+      author: y.author,
+      description: y.description,
+      source: y.source,
+      match_data: y.match_data,
+    })) : undefined,
   };
 
   return {

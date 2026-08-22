@@ -1,41 +1,56 @@
 import React, { useState } from 'react';
 
-// ── Built-in YARA Rule Presets ──────────────────────────────────────────────
+// ── Built-in YARA Rule Presets (Industry Standard Threat Ruleset) ────────────
 export const EXAMPLE_YARA_RULES = [
   {
-    name: 'ransomware_generic',
-    label: 'Ransomware Strings',
-    rule: `rule Ransomware_Generic {
+    name: 'eicar_av_test',
+    label: 'EICAR Antivirus Test Signature',
+    rule: `rule EICAR_Test_File {
   meta:
-    description = "Detects common ransomware extortion indicators"
-    author = "ThreatAtlas"
+    description = "Standard EICAR Antivirus verification test pattern"
+    author = "EICAR / ThreatAtlas"
+    severity = "low"
+  strings:
+    $eicar = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
+    $eicar_tag = "eicar" nocase
+  condition:
+    $eicar or $eicar_tag
+}`
+  },
+  {
+    name: 'wannacry_ransomware',
+    label: 'WannaCry / WanaCrypt0r Ransomware',
+    rule: `rule Ransomware_WannaCry {
+  meta:
+    description = "Detects WannaCry ransomware extortion payloads and mutexes"
+    author = "ThreatAtlas YARA Core"
     severity = "critical"
   strings:
-    $s1 = "Your files have been encrypted" nocase
-    $s2 = "pay the ransom" nocase
-    $s3 = ".locked" nocase
-    $s4 = "bitcoin" nocase
-    $s5 = "decrypt" nocase
+    $w1 = "WanaCrypt0r" nocase
+    $w2 = "WNCRY" nocase
+    $w3 = "Global\\\\MsWinZonesCacheCounterMutexA" nocase
+    $w4 = "wannacry" nocase
+    $w5 = "msg/m_bulgarian.wnry" nocase
   condition:
-    2 of them
+    1 of them
 }`
   },
   {
     name: 'cobalt_strike_beacon',
-    label: 'Cobalt Strike Beacon',
+    label: 'Cobalt Strike Beacon & C2',
     rule: `rule CobaltStrike_Beacon {
   meta:
-    description = "Detects Cobalt Strike Beacon in-memory signatures"
-    author = "ThreatAtlas"
+    description = "Detects Cobalt Strike Beacon in-memory artifacts and reflective loaders"
+    author = "ThreatAtlas YARA Core"
     severity = "critical"
   strings:
     $cs1 = "beacon.x64.dll" nocase
     $cs2 = "beacon.dll" nocase
     $cs3 = "%d is an x64 process" nocase
     $cs4 = "ReflectiveDll.x64.dll" nocase
-    $cs5 = "MZ" at 0
+    $cs5 = "cobalt" nocase
   condition:
-    ($cs5 at 0) and (1 of ($cs1, $cs2, $cs3, $cs4))
+    1 of them
 }`
   },
   {
@@ -43,8 +58,8 @@ export const EXAMPLE_YARA_RULES = [
     label: 'Mimikatz Credential Dumper',
     rule: `rule Mimikatz_Generic {
   meta:
-    description = "Detects Mimikatz credential dumping artifacts"
-    author = "ThreatAtlas"
+    description = "Detects Mimikatz credential dumping and LSASS injection artifacts"
+    author = "ThreatAtlas YARA Core"
     severity = "high"
   strings:
     $m1 = "mimikatz" nocase
@@ -52,17 +67,74 @@ export const EXAMPLE_YARA_RULES = [
     $m3 = "lsadump::" nocase
     $m4 = "privilege::debug" nocase
     $m5 = "Pass-the-Hash" nocase
+    $m6 = "crypto::hash" nocase
   condition:
-    2 of them
+    1 of them
+}`
+  },
+  {
+    name: 'redline_stealer',
+    label: 'RedLine / Infostealer Token Harvester',
+    rule: `rule RedLine_Stealer_Generic {
+  meta:
+    description = "Detects RedLine, Vidar, and Lumma browser credential harvest indicators"
+    author = "ThreatAtlas YARA Core"
+    severity = "high"
+  strings:
+    $r1 = "redline" nocase
+    $r2 = "vidar" nocase
+    $r3 = "lumma" nocase
+    $r4 = "\\\\Google\\\\Chrome\\\\User Data\\\\Default\\\\Login Data" nocase
+    $r5 = "SELECT action_url, username_value, password_value FROM logins" nocase
+    $r6 = "stealer" nocase
+  condition:
+    1 of them
+}`
+  },
+  {
+    name: 'xmrig_coinminer',
+    label: 'XMRig / Monero CPU Cryptominer',
+    rule: `rule Cryptominer_XMRig {
+  meta:
+    description = "Detects unauthorized XMRig / Stratum protocol coinminers"
+    author = "ThreatAtlas YARA Core"
+    severity = "high"
+  strings:
+    $x1 = "xmrig" nocase
+    $x2 = "stratum+tcp://" nocase
+    $x3 = "stratum+ssl://" nocase
+    $x4 = "cryptonight" nocase
+    $x5 = "monero" nocase
+    $x6 = "coinminer" nocase
+  condition:
+    1 of them
+}`
+  },
+  {
+    name: 'emotet_dropper',
+    label: 'Emotet / TrickBot Banking Trojan',
+    rule: `rule Trojan_Emotet_Trickbot {
+  meta:
+    description = "Detects Emotet and TrickBot modular banking trojan droppers"
+    author = "ThreatAtlas YARA Core"
+    severity = "critical"
+  strings:
+    $e1 = "emotet" nocase
+    $e2 = "trickbot" nocase
+    $e3 = "heodo" nocase
+    $e4 = "geodo" nocase
+    $e5 = "banker" nocase
+  condition:
+    1 of them
 }`
   },
   {
     name: 'php_webshell',
-    label: 'PHP Web Shell',
+    label: 'PHP Web Shell & Backdoor',
     rule: `rule PHP_Webshell {
   meta:
-    description = "Detects common obfuscated PHP web shells"
-    author = "ThreatAtlas"
+    description = "Detects obfuscated PHP web shells, evaluators, and system execution"
+    author = "ThreatAtlas YARA Core"
     severity = "high"
   strings:
     $p1 = "eval(base64_decode" nocase
@@ -71,29 +143,146 @@ export const EXAMPLE_YARA_RULES = [
     $p4 = "exec($_GET" nocase
     $p5 = "shell_exec(" nocase
     $p6 = "@eval(" nocase
+    $p7 = "c99shell" nocase
+    $p8 = "r57shell" nocase
+  condition:
+    1 of them
+}`
+  },
+  {
+    name: 'powershell_obfuscated',
+    label: 'Obfuscated PowerShell Download Cradle',
+    rule: `rule PowerShell_Download_Cradle {
+  meta:
+    description = "Detects hidden or encoded PowerShell download and execute cradles"
+    author = "ThreatAtlas YARA Core"
+    severity = "high"
+  strings:
+    $ps1 = "powershell" nocase
+    $ps2 = "-enc" nocase
+    $ps3 = "-encodedcommand" nocase
+    $ps4 = "downloadstring" nocase
+    $ps5 = "downloadfile" nocase
+    $ps6 = "iex(" nocase
+    $ps7 = "invoke-expression" nocase
+    $ps8 = "-windowstyle hidden" nocase
+  condition:
+    $ps1 and (1 of ($ps2, $ps3, $ps4, $ps5, $ps6, $ps7, $ps8))
+}`
+  },
+  {
+    name: 'macro_malware',
+    label: 'Office VBA Malicious Macro',
+    rule: `rule OfficeMacro_Malware {
+  meta:
+    description = "Detects malicious VBA Office macros and execution routines"
+    author = "ThreatAtlas YARA Core"
+    severity = "medium"
+  strings:
+    $macro1 = "AutoOpen" nocase
+    $macro2 = "Document_Open" nocase
+    $macro3 = "Auto_Open" nocase
+    $macro4 = "Shell(" nocase
+    $macro5 = "WScript.Shell" nocase
+    $macro6 = "CreateObject" nocase
+    $macro7 = "vba" nocase
+  condition:
+    1 of ($macro1, $macro2, $macro3) or (2 of ($macro4, $macro5, $macro6, $macro7))
+}`
+  },
+  {
+    name: 'process_injection_api',
+    label: 'Process Injection & Thread Hijacking',
+    rule: `rule Process_Injection_APIs {
+  meta:
+    description = "Detects Win32 memory allocation and remote thread injection APIs"
+    author = "ThreatAtlas YARA Core"
+    severity = "high"
+  strings:
+    $api1 = "VirtualAllocEx" nocase
+    $api2 = "WriteProcessMemory" nocase
+    $api3 = "CreateRemoteThread" nocase
+    $api4 = "QueueUserAPC" nocase
+    $api5 = "SetThreadContext" nocase
+    $api6 = "NtUnmapViewOfSection" nocase
   condition:
     2 of them
 }`
   },
   {
-    name: 'macro_malware',
-    label: 'Office Macro Malware',
-    rule: `rule OfficeMacro_Malware {
+    name: 'anti_analysis_debugger',
+    label: 'Anti-Analysis & Sandbox Evasion',
+    rule: `rule Anti_Analysis_Sandbox_Evasion {
   meta:
-    description = "Detects malicious VBA Office macros"
-    author = "ThreatAtlas"
+    description = "Detects debugger detection, sandbox checks, and sleep acceleration"
+    author = "ThreatAtlas YARA Core"
     severity = "medium"
   strings:
-    $macro1 = "AutoOpen" nocase
-    $macro2 = "Document_Open" nocase
-    $macro3 = "Shell(" nocase
-    $macro4 = "WScript.Shell" nocase
-    $macro5 = "CreateObject" nocase
-    $macro6 = "powershell" nocase
+    $aa1 = "IsDebuggerPresent" nocase
+    $aa2 = "CheckRemoteDebuggerPresent" nocase
+    $aa3 = "NtQueryInformationProcess" nocase
+    $aa4 = "OutputDebugString" nocase
+    $aa5 = "GetTickCount" nocase
   condition:
-    ($macro1 or $macro2) and (2 of ($macro3, $macro4, $macro5, $macro6))
+    2 of them
 }`
   },
+  {
+    name: 'upx_packed_binary',
+    label: 'UPX / High-Entropy Packed Binary',
+    rule: `rule Packed_UPX_Section {
+  meta:
+    description = "Detects UPX and ASPack packed binary sections"
+    author = "ThreatAtlas YARA Core"
+    severity = "medium"
+  strings:
+    $upx1 = "UPX0" nocase
+    $upx2 = "UPX1" nocase
+    $upx3 = "UPX!" nocase
+    $upx4 = "aspack" nocase
+    $upx5 = "upx" nocase
+  condition:
+    1 of them
+}`
+  },
+  {
+    name: 'stego_polyglot_payload',
+    label: 'Steganography / Image Polyglot Payload',
+    rule: `rule Stego_Image_Polyglot {
+  meta:
+    description = "Detects hidden script injections or archive polyglots appended to media"
+    author = "ThreatAtlas YARA Core"
+    severity = "high"
+  strings:
+    $stego1 = "<?php" nocase
+    $stego2 = "<script" nocase
+    $stego3 = "eval(base64" nocase
+    $stego4 = "appended data" nocase
+    $stego5 = "trailer" nocase
+    $stego6 = "polyglot" nocase
+  condition:
+    1 of them
+}`
+  },
+  {
+    name: 'reverse_shell_payload',
+    label: 'Reverse Shell / Meterpreter Payload',
+    rule: `rule Reverse_Shell_Meterpreter {
+  meta:
+    description = "Detects interactive reverse shell connectors and Meterpreter stages"
+    author = "ThreatAtlas YARA Core"
+    severity = "critical"
+  strings:
+    $rs1 = "meterpreter" nocase
+    $rs2 = "/bin/sh -i" nocase
+    $rs3 = "/bin/bash -i" nocase
+    $rs4 = "nc -e /bin" nocase
+    $rs5 = "0>&1 2>&1" nocase
+    $rs6 = "reverse_tcp" nocase
+  condition:
+    1 of them
+}`
+  }
 ];
 
 interface StringDef {

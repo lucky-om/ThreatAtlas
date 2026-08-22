@@ -39,6 +39,11 @@ export const AutomaticYaraCard: React.FC<AutomaticYaraProps> = ({ fileResult, cr
     if (fileResult.extended?.exiftool) {
       searchableParts.push(...Object.values(fileResult.extended.exiftool).map(v => String(v)));
     }
+    if (fileResult.engines && Array.isArray(fileResult.engines)) {
+      fileResult.engines.forEach(e => {
+        if (e.result) searchableParts.push(e.result);
+      });
+    }
   }
 
   const combinedContent = searchableParts.join('\n').toLowerCase();
