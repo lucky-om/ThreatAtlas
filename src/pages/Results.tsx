@@ -141,10 +141,10 @@ export const Results: React.FC = () => {
       }
     }
 
-    // Progress step updates for pipeline visibility
+    // Smooth step updates for pipeline visibility (caps at 4 until complete)
     const stepTimer = setInterval(() => {
-      setScanStep(s => Math.min(5, s + 1));
-    }, 400);
+      setScanStep(s => (s < 4 ? s + 1 : s));
+    }, 600);
 
     try {
       // ── 1. Cryptographic Hash Search (Direct File Lookup) ─────────────────
@@ -158,6 +158,7 @@ export const Results: React.FC = () => {
           const data = fileData.value;
           setFileResult(data);
           setCachedItem(target, data);
+          setScanStep(5);
 
           if (behaviorRes.status === 'fulfilled' && behaviorRes.value) {
             setBehaviorData(behaviorRes.value);
@@ -186,10 +187,15 @@ export const Results: React.FC = () => {
         // Stream live engine results as they arrive
         const analysisData = await pollAnalysis(target, (progress) => {
           setAnalysisResult(progress);
-          setScanStep(3);
+          if (progress.status === 'completed') {
+            setScanStep(5);
+          } else {
+            setScanStep(s => Math.max(s, 3));
+          }
         });
         setAnalysisResult(analysisData);
         setCachedItem(target, analysisData);
+        setScanStep(5);
 
         if (analysisData.hash || (!analysisData.url && analysisData.fileName)) {
           const fallbackHash = analysisData.hash || target;
@@ -342,16 +348,22 @@ export const Results: React.FC = () => {
         if (scanRes?.data?.id) {
           const data = await pollAnalysis(scanRes.data.id, (progress) => {
             setAnalysisResult(progress);
-            setScanStep(3);
+            if (progress.status === 'completed') {
+              setScanStep(5);
+            } else {
+              setScanStep(s => Math.max(s, 3));
+            }
           });
           setAnalysisResult(data);
           setCachedItem(target, data);
+          setScanStep(5);
         }
       }
     } catch (err: any) {
       setError(err.message || 'Threat scan failed. Please verify the target.');
     } finally {
       clearInterval(stepTimer);
+      setScanStep(5);
       setLoading(false);
     }
   };
