@@ -183,10 +183,10 @@ export const Results: React.FC = () => {
 
       // ── 2. VirusTotal Analysis Token (Fresh File or URL Scan) ──────────────
       if (isAnalysisToken) {
+        // Stream live engine results as they arrive
         const analysisData = await pollAnalysis(target, (progress) => {
-          if (progress.stats?.total && progress.stats.total > 0) {
-            setScanStep(3);
-          }
+          setAnalysisResult(progress);
+          setScanStep(3);
         });
         setAnalysisResult(analysisData);
         setCachedItem(target, analysisData);
@@ -317,9 +317,8 @@ export const Results: React.FC = () => {
         const scanRes = await scanUrl(targetUrl);
         if (scanRes?.data?.id) {
           const data = await pollAnalysis(scanRes.data.id, (progress) => {
-            if (progress.stats?.total && progress.stats.total > 0) {
-              setScanStep(3);
-            }
+            setAnalysisResult(progress);
+            setScanStep(3);
           });
           setAnalysisResult(data);
           setCachedItem(target, data);
@@ -338,15 +337,15 @@ export const Results: React.FC = () => {
   }, [rawTarget]);
 
   // ── UNIFIED SCAN PROGRESS ORCHESTRATOR ────────────────────────────────────
-  // Scan must stay in loading orchestrator until all engines & modules finish completely!
-  const isCompleted = Boolean(
+  // Show orchestrator only while initial data handshake is establishing
+  const hasAnyData = Boolean(
     fileResult || 
     domainResult || 
     ipResult || 
-    (analysisResult && analysisResult.status === 'completed')
+    (analysisResult && (analysisResult.engines?.length > 0 || analysisResult.status === 'completed'))
   );
 
-  if (loading || !isCompleted) {
+  if (loading && !hasAnyData) {
     const steps = [
       { id: 1, label: 'Multi-Vendor Antivirus Matrix (70+ Engines)', desc: 'Querying global threat intelligence signatures' },
       { id: 2, label: 'Target Category Protocol Inspection', desc: 'Evaluating protocol structures, headers, and certificates' },
@@ -430,7 +429,7 @@ export const Results: React.FC = () => {
             {/* Bottom Progress Bar */}
             <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#94a3b8', fontFamily: 'var(--font-mono)', marginBottom: '6px' }}>
-                <span>Synchronizing all telemetry engines...</span>
+                <span>Streaming live telemetry from security engines...</span>
                 <span>{Math.min(100, scanStep * 20)}%</span>
               </div>
               <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '999px', overflow: 'hidden' }}>
@@ -462,7 +461,7 @@ export const Results: React.FC = () => {
     );
   }
 
-  const isPending = analysisResult?.status === 'queued' || analysisResult?.status === 'in-progress';
+  const isPending = analysisResult?.status === 'queued' || analysisResult?.status === 'in-progress' || isWebfoxLoading;
 
   // ── PRECISE TARGET CATEGORIZATION ENGINE ──────────────────────────────────
   const targetClean = rawTarget.trim();
@@ -589,11 +588,37 @@ export const Results: React.FC = () => {
       <div className="container" style={{ position: 'relative', zIndex: 10, maxWidth: '1280px' }}>
 
         {isPending && (
-          <div style={{ padding: '14px 20px', marginBottom: '24px', background: 'rgba(0, 242, 255, 0.08)', border: '1px solid rgba(0, 242, 255, 0.3)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <span className="material-symbols-outlined text-primary spin">sync</span>
-            <div>
-              <div className="font-label-caps text-primary">Analysis in progress...</div>
-              <p className="font-code-sm text-on-surface-variant" style={{ margin: 0 }}>Results will update automatically.</p>
+          <div style={{
+            padding: '14px 20px',
+            marginBottom: '24px',
+            background: 'linear-gradient(90deg, rgba(0, 242, 255, 0.08), rgba(185, 66, 255, 0.08))',
+            border: '1px solid rgba(0, 242, 255, 0.35)',
+            borderRadius: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            boxShadow: '0 0 20px rgba(0, 242, 255, 0.1)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <span className="material-symbols-outlined text-primary spin" style={{ fontSize: '24px' }}>sync</span>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#00f2ff', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>LIVE SCAN IN PROGRESS</span>
+                  <span style={{ fontSize: '11px', background: 'rgba(0, 242, 255, 0.15)', padding: '2px 8px', borderRadius: '4px', color: '#fff', fontFamily: 'var(--font-mono)' }}>
+                    {engines.length} / {total || 70} Engines Evaluated
+                  </span>
+                </div>
+                <p className="font-code-sm text-on-surface-variant" style={{ margin: '4px 0 0 0', fontSize: '12px' }}>
+                  Security engines and forensic modules are streaming results in real-time. Report is updating live.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#00ffa3', display: 'inline-block', boxShadow: '0 0 8px #00ffa3' }}></span>
+              <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: '#00ffa3', fontWeight: 700 }}>STREAMING LIVE</span>
             </div>
           </div>
         )}
