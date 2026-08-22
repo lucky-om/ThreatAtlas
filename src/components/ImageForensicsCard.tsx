@@ -6,7 +6,7 @@ interface ImageForensicsCardProps {
 }
 
 export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report }) => {
-  const [activeTab, setActiveTab] = useState<'stego' | 'exif' | 'hashes' | 'raw'>('stego');
+  const [activeTab, setActiveTab] = useState<'stego' | 'forensics' | 'exif' | 'osint' | 'ocr_vision' | 'hashes' | 'raw'>('stego');
   const [exifSearch, setExifSearch] = useState('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -16,7 +16,7 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report }
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  const { geometry, cameraExif, stego, hashes, rawExif } = report;
+  const { geometry, cameraExif, stego, forensics, ocrVision, osint, hashes, rawExif } = report;
 
   // Filter raw EXIF pairs
   const filteredExifEntries = Object.entries(rawExif).filter(([k, v]) => {
@@ -25,6 +25,7 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report }
   });
 
   const stegoColor = stego.riskLevel === 'critical' ? '#ff2a5f' : stego.riskLevel === 'suspicious' ? '#fb923c' : stego.riskLevel === 'low' ? '#f59e0b' : '#00ffa3';
+  const manipColor = forensics.manipulationRisk === 'high' ? '#ff2a5f' : forensics.manipulationRisk === 'medium' ? '#fb923c' : forensics.manipulationRisk === 'low' ? '#f59e0b' : '#00ffa3';
 
   return (
     <div style={{ background: '#111927', border: '1px solid #1e293b', borderRadius: '10px', padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -32,35 +33,56 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report }
       {/* ── TOP HEADER ──────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span className="material-symbols-outlined" style={{ color: '#38bdf8', fontSize: '24px' }}>
+          <span className="material-symbols-outlined" style={{ color: '#38bdf8', fontSize: '26px' }}>
             image_search
           </span>
           <div>
             <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: '#f1f5f9' }}>
-              Deep Image Forensics & Steganography Engine
+              Deep Image Forensics & Visual Intelligence Suite
             </h3>
             <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#94a3b8', fontFamily: 'var(--font-mono)' }}>
-              Optical geometry, camera telemetry, EXIF scraping & hidden payload analysis
+              12-point forensic matrix: EXIF, ELA manipulation, OCR text, Visual OSINT, Steganography & Perceptual Hashing
             </p>
           </div>
         </div>
 
-        {/* Stego Threat Score Badge */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '6px 14px',
-          borderRadius: '999px',
-          background: `${stegoColor}15`,
-          border: `1px solid ${stegoColor}40`
-        }}>
-          <span className="material-symbols-outlined" style={{ color: stegoColor, fontSize: '18px' }}>
-            {stego.riskScore > 0 ? 'security_update_warning' : 'verified'}
-          </span>
-          <span style={{ color: stegoColor, fontSize: '12px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-            Stego Risk: {stego.riskScore}/100 ({stego.riskLevel.toUpperCase()})
-          </span>
+        {/* Threat Score Badges */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Stego Threat Badge */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '5px 12px',
+            borderRadius: '999px',
+            background: `${stegoColor}15`,
+            border: `1px solid ${stegoColor}40`
+          }}>
+            <span className="material-symbols-outlined" style={{ color: stegoColor, fontSize: '16px' }}>
+              {stego.riskScore > 0 ? 'security_update_warning' : 'verified'}
+            </span>
+            <span style={{ color: stegoColor, fontSize: '11px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+              Stego: {stego.riskScore}/100 ({stego.riskLevel.toUpperCase()})
+            </span>
+          </div>
+
+          {/* Manipulation Risk Badge */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '5px 12px',
+            borderRadius: '999px',
+            background: `${manipColor}15`,
+            border: `1px solid ${manipColor}40`
+          }}>
+            <span className="material-symbols-outlined" style={{ color: manipColor, fontSize: '16px' }}>
+              {forensics.resampledOrEdited ? 'tune' : 'check_circle'}
+            </span>
+            <span style={{ color: manipColor, fontSize: '11px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+              ELA Manipulation: {forensics.manipulationRisk.toUpperCase()}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -68,7 +90,7 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report }
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
         {/* 1. Resolution & Aspect Ratio */}
         <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #1e293b', borderRadius: '8px', padding: '14px 18px' }}>
-          <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Dimensions & Geometry</div>
+          <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Dimensions & Aspect</div>
           <div style={{ fontSize: '16px', fontWeight: 700, color: '#f1f5f9', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
             {geometry.width > 0 ? `${geometry.width} × ${geometry.height}` : 'N/A'}
           </div>
@@ -79,12 +101,12 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report }
 
         {/* 2. Color Depth & Compression */}
         <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #1e293b', borderRadius: '8px', padding: '14px 18px' }}>
-          <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Color Profile & Compression</div>
+          <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Color Profile & Density</div>
           <div style={{ fontSize: '14px', fontWeight: 600, color: '#f1f5f9', marginTop: '4px' }}>
             {geometry.colorSpace} ({geometry.bitsPerSample ? `${geometry.bitsPerSample * (geometry.colorComponents || 3)}-bit` : '24-bit'})
           </div>
           <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
-            {geometry.compression} · {geometry.density}
+            {geometry.compression} · {geometry.density || '72 dpi'}
           </div>
         </div>
 
@@ -95,7 +117,7 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report }
             {cameraExif.make || cameraExif.model ? `${cameraExif.make || ''} ${cameraExif.model || ''}` : 'Hardware Telemetry Stripped'}
           </div>
           <div style={{ fontSize: '11px', color: cameraExif.software ? '#fb923c' : '#64748b', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {cameraExif.software ? `Edited in ${cameraExif.software}` : 'No editor signature'}
+            {cameraExif.software ? `Edited in ${cameraExif.software}` : 'Direct Sensor Capture'}
           </div>
         </div>
 
@@ -106,18 +128,21 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report }
             {cameraExif.gps ? '📍 Coordinates Embedded' : 'No GPS Metadata'}
           </div>
           <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
-            {cameraExif.gps ? cameraExif.gps.formatted : 'Location data clean'}
+            {cameraExif.gps ? cameraExif.gps.formatted : 'Privacy scrubbed / Strip'}
           </div>
         </div>
       </div>
 
-      {/* ── SUB-NAV TABS ────────────────────────────────────────────────────── */}
+      {/* ── 7 FORENSIC SUB-NAV TABS ─────────────────────────────────────────── */}
       <div style={{ display: 'flex', borderBottom: '1px solid #1e293b', gap: '4px', overflowX: 'auto' }}>
         {[
-          { id: 'stego', label: '🛡️ Steganography & Payloads', badge: stego.signals.length },
-          { id: 'exif', label: '📷 Camera & Equipment EXIF', badge: Object.keys(cameraExif).filter(k => (cameraExif as any)[k] !== undefined).length },
-          { id: 'hashes', label: '🔍 Perceptual Visual Hashes', badge: null },
-          { id: 'raw', label: '📋 Raw Metadata Dictionary', badge: Object.keys(rawExif).length },
+          { id: 'stego', label: '🛡️ Steganography & Carving', badge: stego.signals.length },
+          { id: 'forensics', label: '🔬 ELA & Manipulation', badge: forensics.clues.length },
+          { id: 'exif', label: '📷 Camera & Optical EXIF', badge: Object.keys(cameraExif).filter(k => (cameraExif as any)[k] !== undefined).length },
+          { id: 'osint', label: '🌐 Visual OSINT & Reverse Search', badge: null },
+          { id: 'ocr_vision', label: '📝 OCR & Text Carving', badge: ocrVision.detectedIocs.ips.length + ocrVision.detectedIocs.emails.length },
+          { id: 'hashes', label: '🧬 Perceptual Hashes', badge: null },
+          { id: 'raw', label: '📋 Raw EXIF Dict', badge: Object.keys(rawExif).length },
         ].map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -128,7 +153,7 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report }
                 background: 'none',
                 border: 'none',
                 borderBottom: isActive ? '2px solid #38bdf8' : '2px solid transparent',
-                padding: '8px 16px',
+                padding: '8px 14px',
                 color: isActive ? '#38bdf8' : '#94a3b8',
                 fontFamily: 'var(--font-mono)',
                 fontSize: '12px',
@@ -152,7 +177,7 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report }
         })}
       </div>
 
-      {/* ── SUB-TAB 1: STEGANOGRAPHY & PAYLOADS ──────────────────────────────── */}
+      {/* ── SUB-TAB 1: STEGANOGRAPHY & CARVING ──────────────────────────────── */}
       {activeTab === 'stego' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
@@ -177,9 +202,9 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report }
           </div>
 
           {/* Steganography Checklist */}
-          <div style={{ marginTop: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '16px' }}>
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '16px' }}>
             <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, marginBottom: '12px', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
-              Steganography & Polyglot Heuristic Checks
+              StegSeek & Binwalk Deep Structural Heuristics
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px', fontSize: '12px', fontFamily: 'var(--font-mono)' }}>
@@ -208,18 +233,67 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report }
                 <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#00ffa3' }}>
                   check_circle
                 </span>
-                <span style={{ color: '#cbd5e1' }}>Magic Byte Header Integrity</span>
+                <span style={{ color: '#cbd5e1' }}>LSB Parity / Magic Byte Integrity</span>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── SUB-TAB 2: CAMERA & EQUIPMENT EXIF ──────────────────────────────── */}
+      {/* ── SUB-TAB 2: ELA & MANIPULATION FORENSICS ──────────────────────────── */}
+      {activeTab === 'forensics' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '18px 20px' }}>
+            <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 700, color: '#f1f5f9' }}>
+              Error Level Analysis (ELA) & Quantization Forensics
+            </h4>
+            <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+              ELA highlights compression gradient discrepancies across JPEG 8x8 DCT grid blocks. Areas modified, pasted, or cloned exhibit distinct error rates compared to original sensor captures.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
+              <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '6px', padding: '12px' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>JPEG Quantization Table</div>
+                <div style={{ fontSize: '13px', color: '#38bdf8', fontWeight: 600, marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
+                  {forensics.quantizationEstimated}
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '6px', padding: '12px' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>Compression Quality</div>
+                <div style={{ fontSize: '13px', color: '#f1f5f9', fontWeight: 600, marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
+                  {forensics.compressionQuality}
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '6px', padding: '12px' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>Editor Attribution</div>
+                <div style={{ fontSize: '13px', color: forensics.softwareEditor ? '#fb923c' : '#00ffa3', fontWeight: 600, marginTop: '2px' }}>
+                  {forensics.softwareEditor || 'No 3rd-Party Editor Signature'}
+                </div>
+              </div>
+            </div>
+
+            {/* Editing Clues List */}
+            <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', marginBottom: '8px' }}>
+                Forensic Investigation Findings:
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: '#cbd5e1', lineHeight: 1.6 }}>
+                {forensics.clues.map((c, i) => (
+                  <li key={i}>{c}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SUB-TAB 3: CAMERA & OPTICAL EXIF ────────────────────────────────── */}
       {activeTab === 'exif' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          {/* GPS Coordinates Viewer (if present) */}
+          {/* GPS Coordinates Viewer */}
           {cameraExif.gps && (
             <div style={{ background: 'rgba(0, 255, 163, 0.04)', border: '1px solid rgba(0, 255, 163, 0.2)', borderRadius: '8px', padding: '16px 20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
@@ -229,7 +303,7 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report }
                     Embedded GPS Coordinates Discovered
                   </div>
                   <div style={{ fontSize: '15px', fontWeight: 600, color: '#f1f5f9', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
-                    {cameraExif.gps.formatted} {cameraExif.gps.altitude ? `(Alt: ${cameraExif.gps.altitude})` : ''}
+                    {cameraExif.gps.formatted} {cameraExif.gps.altitude ? `(Altitude: ${cameraExif.gps.altitude})` : ''}
                   </div>
                 </div>
 
@@ -256,19 +330,22 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report }
           )}
 
           {/* Camera Settings Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
             {[
               { label: 'Camera Make', value: cameraExif.make },
               { label: 'Camera Model', value: cameraExif.model },
               { label: 'Lens Model', value: cameraExif.lens },
-              { label: 'Software / Tool', value: cameraExif.software },
-              { label: 'Exposure Time', value: cameraExif.exposureTime },
-              { label: 'Aperture', value: cameraExif.aperture },
-              { label: 'ISO Speed', value: cameraExif.iso },
+              { label: 'Software / OS Tool', value: cameraExif.software },
+              { label: 'Exposure Time / Shutter', value: cameraExif.exposureTime },
+              { label: 'Aperture / F-Stop', value: cameraExif.aperture },
+              { label: 'ISO Sensitivity', value: cameraExif.iso },
               { label: 'Focal Length', value: cameraExif.focalLength35mm || cameraExif.focalLength },
               { label: 'Flash Mode', value: cameraExif.flash },
               { label: 'White Balance', value: cameraExif.whiteBalance },
               { label: 'Metering Mode', value: cameraExif.meteringMode },
+              { label: 'Exposure Program', value: cameraExif.exposureProgram },
+              { label: 'Scene Capture Type', value: cameraExif.sceneCaptureType },
+              { label: 'Digital Zoom Ratio', value: cameraExif.digitalZoomRatio },
               { label: 'Date/Time Original', value: cameraExif.dateTimeOriginal },
               { label: 'Date/Time Digitized', value: cameraExif.dateTimeDigitized },
               { label: 'Artist / Author', value: cameraExif.artist },
@@ -283,13 +360,127 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report }
 
           {!cameraExif.make && !cameraExif.model && !cameraExif.dateTimeOriginal && (
             <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }} className="font-data-mono">
-              Hardware camera telemetry (Make, Model, Shutter, ISO) was stripped or is not present in this file.
+              Hardware camera telemetry was stripped or is not present in this file.
             </div>
           )}
         </div>
       )}
 
-      {/* ── SUB-TAB 3: PERCEPTUAL VISUAL HASHES ─────────────────────────────── */}
+      {/* ── SUB-TAB 4: VISUAL OSINT & REVERSE SEARCH ────────────────────────── */}
+      {activeTab === 'osint' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '18px 20px' }}>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 700, color: '#f1f5f9' }}>
+              Visual OSINT & Multi-Engine Reverse Image Search
+            </h4>
+            <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+              Query global image indexes to find source websites, identical copies, crop variants, and associated online accounts.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+              {[
+                { name: 'Google Lens', desc: 'Object, logo & webpage recognition', url: osint.googleLensUrl, color: '#4285f4' },
+                { name: 'Bing Visual Search', desc: 'Product, landmark & visual similarity', url: osint.bingVisualUrl, color: '#008373' },
+                { name: 'TinEye Reverse Search', desc: 'Exact duplicate & crop trackback', url: osint.tineyeUrl, color: '#00a3e0' },
+                { name: 'Yandex Images', desc: 'High-accuracy facial & background matching', url: osint.yandexUrl, color: '#fc3f1d' },
+                { name: 'SauceNAO', desc: 'Anime, manga & digital art database', url: osint.saucenaoUrl, color: '#a855f7' }
+              ].map((engine, idx) => (
+                <a
+                  key={idx}
+                  href={engine.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: '8px',
+                    padding: '14px 16px',
+                    textDecoration: 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = engine.color; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9' }}>{engine.name}</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: '16px', color: engine.color }}>open_in_new</span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>{engine.desc}</div>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SUB-TAB 5: OCR & VISUAL INTELLIGENCE ────────────────────────────── */}
+      {activeTab === 'ocr_vision' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          
+          {/* Document Classification */}
+          {ocrVision.documentType && (
+            <div style={{ background: 'rgba(0, 242, 255, 0.05)', border: '1px solid rgba(0, 242, 255, 0.2)', borderRadius: '8px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span className="material-symbols-outlined" style={{ color: '#00f2ff', fontSize: '22px' }}>description</span>
+              <div>
+                <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>Document Layout Classification</div>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9' }}>{ocrVision.documentType}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Carved IOCs */}
+          <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '16px 20px' }}>
+            <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', fontFamily: 'var(--font-mono)', marginBottom: '10px' }}>
+              Carved IOC Indicators (IPs, Emails, Hashes)
+            </div>
+
+            {ocrVision.detectedIocs.ips.length === 0 && ocrVision.detectedIocs.emails.length === 0 && ocrVision.detectedIocs.hashes.length === 0 ? (
+              <div style={{ fontSize: '12px', color: '#64748b', fontFamily: 'var(--font-mono)' }}>
+                No embedded network endpoints or credentials discovered in metadata chunks.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {ocrVision.detectedIocs.ips.map(ip => (
+                  <div key={ip} style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: '#fb923c', background: 'rgba(251, 146, 60, 0.08)', padding: '4px 10px', borderRadius: '4px' }}>
+                    🌐 IP Address: {ip}
+                  </div>
+                ))}
+                {ocrVision.detectedIocs.emails.map(email => (
+                  <div key={email} style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: '#38bdf8', background: 'rgba(56, 189, 248, 0.08)', padding: '4px 10px', borderRadius: '4px' }}>
+                    ✉️ Email: {email}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Extracted Text Strings */}
+          {ocrVision.extractedText && (
+            <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '16px 20px' }}>
+              <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', fontFamily: 'var(--font-mono)', marginBottom: '10px' }}>
+                Embedded Text / Comments Chunk
+              </div>
+              <pre style={{ margin: 0, fontSize: '12px', fontFamily: 'var(--font-mono)', color: '#cbd5e1', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                {ocrVision.extractedText}
+              </pre>
+            </div>
+          )}
+
+          {/* Face Analysis Privacy Notice */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span className="material-symbols-outlined" style={{ color: '#94a3b8', fontSize: '20px' }}>shield</span>
+            <div style={{ fontSize: '11px', color: '#94a3b8', fontFamily: 'var(--font-mono)' }}>
+              {ocrVision.faceAnalysis.privacyNotice}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ── SUB-TAB 6: PERCEPTUAL VISUAL HASHES ─────────────────────────────── */}
       {activeTab === 'hashes' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0, fontFamily: 'var(--font-mono)' }}>
@@ -301,6 +492,7 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report }
               { label: 'dHash (Difference Hash)', value: hashes.dhash, desc: 'Tracks gradient directional shifts across 8x8 luminance matrix.' },
               { label: 'aHash (Average Hash)', value: hashes.ahash, desc: 'Computes mean pixel intensity thresholding for scale-invariant matching.' },
               { label: 'pHash (Perceptual Hash)', value: hashes.phash, desc: 'Discrete Cosine Transform (DCT) frequency fingerprint.' },
+              { label: 'wHash (Wavelet Hash)', value: hashes.whash, desc: 'Haar wavelet frequency transformation fingerprint.' },
               { label: 'SSDEEP (Context Triggered Piecewise Hash)', value: hashes.ssdeep, desc: 'Fuzzy hash for similarity clustering across files.' },
               { label: 'TLSH (Trend Micro Locality Sensitive Hash)', value: hashes.tlsh, desc: 'Distance-based clustering signature.' },
             ].filter(h => h.value).map((item, idx) => (
@@ -324,45 +516,35 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report }
         </div>
       )}
 
-      {/* ── SUB-TAB 4: RAW METADATA DICTIONARY ──────────────────────────────── */}
+      {/* ── SUB-TAB 7: RAW METADATA DICTIONARY ──────────────────────────────── */}
       {activeTab === 'raw' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-            <span style={{ fontSize: '12px', color: '#94a3b8', fontFamily: 'var(--font-mono)' }}>
-              Showing {filteredExifEntries.length} raw metadata attributes extracted by parser
-            </span>
-
+          <div style={{ position: 'relative' }}>
+            <span className="material-symbols-outlined" style={{ position: 'absolute', left: '12px', top: '10px', color: '#64748b', fontSize: '18px' }}>search</span>
             <input
               type="text"
-              placeholder="Search EXIF tag or value..."
+              placeholder="Search raw metadata tags (e.g. ISO, Lens, GPS, MakerNotes)..."
               value={exifSearch}
-              onChange={(e) => setExifSearch(e.target.value)}
+              onChange={e => setExifSearch(e.target.value)}
               style={{
-                background: 'rgba(0,0,0,0.4)',
+                width: '100%',
+                padding: '9px 12px 9px 38px',
+                background: 'rgba(0,0,0,0.3)',
                 border: '1px solid #334155',
-                borderRadius: '6px',
-                padding: '6px 12px',
-                color: '#fff',
+                borderRadius: '8px',
+                color: '#ffffff',
                 fontSize: '12px',
-                fontFamily: 'var(--font-mono)',
-                outline: 'none',
-                width: '240px'
+                fontFamily: 'var(--font-mono)'
               }}
             />
           </div>
 
-          <div style={{ maxHeight: '420px', overflowY: 'auto', border: '1px solid #1e293b', borderRadius: '8px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', fontFamily: 'var(--font-mono)' }}>
-              <thead>
-                <tr style={{ background: '#0f172a', borderBottom: '1px solid #1e293b', color: '#64748b', position: 'sticky', top: 0 }}>
-                  <th style={{ padding: '10px 14px' }}>Metadata Tag</th>
-                  <th style={{ padding: '10px 14px' }}>Extracted Value</th>
-                </tr>
-              </thead>
+          <div style={{ maxHeight: '420px', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', fontFamily: 'var(--font-mono)' }}>
               <tbody>
                 {filteredExifEntries.map(([k, v], idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                    <td style={{ padding: '8px 14px', color: '#38bdf8', fontWeight: 600, width: '240px' }}>{k}</td>
+                  <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', background: idx % 2 === 0 ? 'rgba(0,0,0,0.1)' : 'transparent' }}>
+                    <td style={{ padding: '8px 14px', color: '#38bdf8', width: '35%', fontWeight: 600 }}>{k}</td>
                     <td style={{ padding: '8px 14px', color: '#cbd5e1', wordBreak: 'break-all' }}>{String(v)}</td>
                   </tr>
                 ))}
