@@ -674,14 +674,17 @@ export function normalizeAnalysis(data: any): NormalizedAnalysis {
     stats: { malicious, suspicious, harmless, undetected, total },
     engines,
     url: attrs.url || data?.meta?.url_info?.url,
-    // Robust extraction across all VirusTotal response topologies
-    hash: data?.meta?.file_info?.sha256
-      || data?.data?.meta?.file_info?.sha256
-      || attrs.sha256
-      || data?.data?.attributes?.sha256
-      || data?.meta?.file_info?.md5
-      || data?.meta?.file_info?.sha1
-      || (data?.data?.links?.item ? data.data.links.item.split('/').pop() : undefined),
+    // Only set hash if it is an actual cryptographic file hash (MD5/SHA1/SHA256), NOT a URL token (u-...)
+    hash: (() => {
+      const candidate = data?.meta?.file_info?.sha256
+        || data?.data?.meta?.file_info?.sha256
+        || attrs.sha256
+        || data?.data?.attributes?.sha256
+        || data?.meta?.file_info?.md5
+        || data?.meta?.file_info?.sha1
+        || (data?.data?.links?.item && !data.data.links.item.includes('/urls/') ? data.data.links.item.split('/').pop() : undefined);
+      return candidate && isValidHash(candidate) ? candidate : undefined;
+    })(),
     fileName: data?.meta?.file_info?.name || attrs.meaningful_name || (attrs.names ? attrs.names[0] : undefined),
     fileSize: data?.meta?.file_info?.size || attrs.size,
     extended
