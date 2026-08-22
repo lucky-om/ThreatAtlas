@@ -1698,7 +1698,7 @@ export const Results: React.FC = () => {
           </div>
         )}
 
-        {/* ── TAB 6: SUMMARY ───────────────────────────────────────────────────── */}
+        {/* ── TAB 6: SUMMARY (UNIFIED MULTI-ENGINE & FORENSIC SYNTHESIS) ─────── */}
         {activeTab === 'SUMMARY' && (
           <div style={{
             background: '#111927',
@@ -1709,12 +1709,42 @@ export const Results: React.FC = () => {
             flexDirection: 'column',
             gap: '24px'
           }}>
+            {/* 1. Atlas AI Verdict & Remediation */}
             <AiSummary threatData={fileResult || analysisResult || domainResult || ipResult} type={isFile ? 'file' : 'url'} />
             
-            {/* Multi-Source Threat Feeds */}
+            {/* 2. Specialized Media & Document Forensics Engine for Files */}
+            {isFile && isImage && imageForensics && (
+              <ImageForensicsCard report={imageForensics} />
+            )}
+
+            {isFile && audioForensics && (
+              <AudioForensicsCard report={audioForensics} />
+            )}
+
+            {isFile && videoForensics && (
+              <VideoForensicsCard report={videoForensics} />
+            )}
+
+            {isFile && docForensics && (
+              <DocumentForensicsCard report={docForensics} />
+            )}
+
+            {isFile && archiveForensics && (
+              <ArchiveForensicsCard report={archiveForensics} />
+            )}
+
+            {/* 3. Automatic YARA Rule Pattern Matcher for Files */}
+            {isFile && (
+              <AutomaticYaraCard 
+                fileResult={fileResult}
+                crowdsourcedYara={fileResult?.extended?.crowdsourcedYara}
+              />
+            )}
+
+            {/* 4. Multi-Source Threat Feeds */}
             <ThreatFeedCard target={displayTitle} threatScore={score} tags={fileResult?.tags} />
 
-            {/* X.509 Certificate Inspector (For URLs and Domains) */}
+            {/* 5. URL & Domain Specialized Modules */}
             {(isUrlScan || isDomainScan) && (
               <CertInspectorCard domain={analysisResult?.url || domainResult?.domain || targetClean} />
             )}

@@ -41,7 +41,9 @@ export const App: React.FC = () => {
               <Route path="/file/:hash/:tab?" element={<Results />} />
               <Route path="/url/:id/:tab?" element={<Results />} />
               <Route path="/domain/:query/:tab?" element={<Results />} />
-              <Route path="/ip-address/:query/:tab?" element={<IpLookup />} />
+              <Route path="/ip-address/:query/:tab?" element={<Results />} />
+              <Route path="/ip/:query/:tab?" element={<Results />} />
+              <Route path="/ip-intelligence" element={<IpLookup />} />
 
               {/* Information & Legal */}
               <Route path="/about" element={<About />} />
