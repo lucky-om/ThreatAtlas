@@ -20,6 +20,7 @@ export const AiSummary: React.FC<AiSummaryProps> = ({ threatData, type }) => {
       const stats = threatData?.stats || {};
       const malicious = stats.malicious || 0;
       const suspicious = stats.suspicious || 0;
+      const total = (stats.malicious || 0) + (stats.undetected || 0) + (stats.harmless || 0) + (stats.suspicious || 0) || 70;
       const targetName = threatData?.name || threatData?.fileName || threatData?.domain || threatData?.url || threatData?.ip || threatData?.sha256 || 'Target';
       const isCritical = malicious >= 5;
       const isSuspicious = malicious > 0 || suspicious > 0;
@@ -40,18 +41,28 @@ export const AiSummary: React.FC<AiSummaryProps> = ({ threatData, type }) => {
         act = `Safe to use under standard corporate security policy. Baseline telemetry verified.`;
       }
 
-      // Try live LLM if available for custom context
+      // Try live LLM if available for contextual refinement strictly grounded in scan facts
       try {
-        const prompt = `You are Atlas AI. Summarize threat data for ${targetName} in EXACTLY two short bullet points:
-Finding: (1 sentence summary)
-Action: (1 sentence actionable remediation)`;
+        const prompt = `You are Atlas AI, an elite cybersecurity analyst.
+Target: ${targetName} (${type.toUpperCase()})
+Scan Verdict: ${v} (${malicious}/${total} vendors flagged malicious, ${suspicious} suspicious)
+
+INSTRUCTIONS:
+${v === 'CLEAN' 
+  ? '- The scan is VERIFIED CLEAN with 0 detections. State clearly that the target is safe with zero threat signatures or anomalous payloads found. Do NOT mention any malware, exploits, or quarantine.'
+  : `- The scan has ${malicious} MALICIOUS flags. Summarize the threat level accurately and provide incident response remediation.`
+}
+
+Respond strictly in this 2-line format:
+Finding: <1 sentence factual summary matching the ${v} verdict>
+Action: <1 sentence recommended security practice matching the ${v} verdict>`;
 
         const res = await fetch('/api/ai/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             messages: [
-              { role: 'system', content: 'You are Atlas AI. Respond strictly with "Finding: <text>" and "Action: <text>" in max 2 sentences.' },
+              { role: 'system', content: 'You are Atlas AI. Provide concise, 100% factually grounded cybersecurity verdicts. Never invent fictional vulnerabilities when a file is clean.' },
               { role: 'user', content: prompt }
             ]
           })
@@ -63,8 +74,17 @@ Action: (1 sentence actionable remediation)`;
           if (reply.includes('Finding:') && reply.includes('Action:')) {
             const fMatch = reply.match(/Finding:\s*([^\n]+)/i);
             const aMatch = reply.match(/Action:\s*([^\n]+)/i);
-            if (fMatch?.[1]) kf = fMatch[1].trim();
-            if (aMatch?.[1]) act = aMatch[1].trim();
+            const rawFinding = fMatch?.[1]?.trim();
+            const rawAction = aMatch?.[1]?.trim();
+
+            // Consistency check: If verdict is CLEAN, reject any hallucinated malware/exploit keywords
+            const containsContradiction = v === 'CLEAN' && 
+              /malicious|exploit|vulnerability|quarantine|infected|ransomware|trojan|backdoor/i.test(rawFinding || '');
+
+            if (!containsContradiction) {
+              if (rawFinding) kf = rawFinding;
+              if (rawAction) act = rawAction;
+            }
           }
         }
       } catch (_) {}
