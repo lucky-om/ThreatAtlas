@@ -184,7 +184,9 @@ export const Results: React.FC = () => {
       // ── 2. VirusTotal Analysis Token (Fresh File or URL Scan) ──────────────
       if (isAnalysisToken) {
         const analysisData = await pollAnalysis(target, (progress) => {
-          setAnalysisResult(progress);
+          if (progress.stats?.total && progress.stats.total > 0) {
+            setScanStep(3);
+          }
         });
         setAnalysisResult(analysisData);
         setCachedItem(target, analysisData);
@@ -315,9 +317,12 @@ export const Results: React.FC = () => {
         const scanRes = await scanUrl(targetUrl);
         if (scanRes?.data?.id) {
           const data = await pollAnalysis(scanRes.data.id, (progress) => {
-            setAnalysisResult(progress);
+            if (progress.stats?.total && progress.stats.total > 0) {
+              setScanStep(3);
+            }
           });
           setAnalysisResult(data);
+          setCachedItem(target, data);
         }
       }
     } catch (err: any) {
@@ -333,7 +338,15 @@ export const Results: React.FC = () => {
   }, [rawTarget]);
 
   // ── UNIFIED SCAN PROGRESS ORCHESTRATOR ────────────────────────────────────
-  if (loading && !fileResult && !analysisResult && !domainResult && !ipResult) {
+  // Scan must stay in loading orchestrator until all engines & modules finish completely!
+  const isCompleted = Boolean(
+    fileResult || 
+    domainResult || 
+    ipResult || 
+    (analysisResult && analysisResult.status === 'completed')
+  );
+
+  if (loading || !isCompleted) {
     const steps = [
       { id: 1, label: 'Multi-Vendor Antivirus Matrix (70+ Engines)', desc: 'Querying global threat intelligence signatures' },
       { id: 2, label: 'Target Category Protocol Inspection', desc: 'Evaluating protocol structures, headers, and certificates' },
