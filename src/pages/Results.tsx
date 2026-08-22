@@ -32,13 +32,26 @@ import {
   extractAudioForensics, 
   extractVideoForensics, 
   extractDocumentForensics, 
-  extractArchiveForensics 
+  extractArchiveForensics,
+  extractPeForensics,
+  extractElfForensics,
+  extractApkForensics,
+  extractEmailForensics,
+  extractPcapForensics,
+  detectMagicDiscrepancy
 } from '../services/mediaForensics';
 import { ImageForensicsCard } from '../components/ImageForensicsCard';
 import { AudioForensicsCard } from '../components/AudioForensicsCard';
 import { VideoForensicsCard } from '../components/VideoForensicsCard';
 import { DocumentForensicsCard } from '../components/DocumentForensicsCard';
 import { ArchiveForensicsCard } from '../components/ArchiveForensicsCard';
+import { PeExecutableCard } from '../components/PeExecutableCard';
+import { ElfExecutableCard } from '../components/ElfExecutableCard';
+import { ApkForensicsCard } from '../components/ApkForensicsCard';
+import { EmailForensicsCard } from '../components/EmailForensicsCard';
+import { PcapForensicsCard } from '../components/PcapForensicsCard';
+import { CyberChefModule } from '../components/CyberChefModule';
+import { MagicDiscrepancyBanner } from '../components/MagicDiscrepancyBanner';
 import { CertInspectorCard } from '../components/CertInspectorCard';
 import { ThreatFeedCard } from '../components/ThreatFeedCard';
 import { generatePdfThreatReport } from '../utils/pdfExport';
@@ -565,8 +578,14 @@ export const Results: React.FC = () => {
   const videoForensics = isFile && fileCategory === 'video' ? extractVideoForensics(fileResult) : null;
   const docForensics = isFile && fileCategory === 'document' ? extractDocumentForensics(fileResult) : null;
   const archiveForensics = isFile && fileCategory === 'archive' ? extractArchiveForensics(fileResult) : null;
+  const peForensics = isFile && fileCategory === 'executable' ? extractPeForensics(fileResult) : null;
+  const elfForensics = isFile && fileCategory === 'elf' ? extractElfForensics(fileResult) : null;
+  const apkForensics = isFile && fileCategory === 'apk' ? extractApkForensics(fileResult) : null;
+  const emailForensics = isFile && fileCategory === 'email' ? extractEmailForensics(fileResult) : null;
+  const pcapForensics = isFile && fileCategory === 'pcap' ? extractPcapForensics(fileResult) : null;
+  const magicDiscrepancy = isFile ? detectMagicDiscrepancy(fileResult, targetClean) : null;
 
-  const hasSpecializedFileModule = Boolean(isImage || audioForensics || videoForensics || docForensics || archiveForensics);
+  const hasSpecializedFileModule = Boolean(isImage || audioForensics || videoForensics || docForensics || archiveForensics || peForensics || elfForensics || apkForensics || emailForensics || pcapForensics);
 
   const handleExportPdf = () => {
     const data = fileResult || analysisResult || domainResult || ipResult;
@@ -1368,12 +1387,19 @@ export const Results: React.FC = () => {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       {[
+                        ...(magicDiscrepancy?.hasDiscrepancy ? [{ id: 'details-magic-alert', label: '⚠️ Masquerading Alert' }] : []),
                         ...(isImage && imageForensics ? [{ id: 'details-image-forensics', label: '🖼️ Image Forensics & Stego' }] : []),
                         ...(audioForensics ? [{ id: 'details-audio-forensics', label: '🎧 Audio Stream & ID3 Forensics' }] : []),
                         ...(videoForensics ? [{ id: 'details-video-forensics', label: '🎬 Video Stream & Codecs' }] : []),
                         ...(docForensics ? [{ id: 'details-doc-forensics', label: '📄 Document Security & Macros' }] : []),
                         ...(archiveForensics ? [{ id: 'details-archive-forensics', label: '📦 Archive & Container Forensics' }] : []),
+                        ...(peForensics ? [{ id: 'details-pe-forensics', label: '💻 Windows PE Executable Analysis' }] : []),
+                        ...(elfForensics ? [{ id: 'details-elf-forensics', label: '🐧 Linux ELF Binary Analysis' }] : []),
+                        ...(apkForensics ? [{ id: 'details-apk-forensics', label: '📱 Android APK & Permissions' }] : []),
+                        ...(emailForensics ? [{ id: 'details-email-forensics', label: '📧 Email Headers & Phishing Routing' }] : []),
+                        ...(pcapForensics ? [{ id: 'details-pcap-forensics', label: '🌐 Network PCAP Capture Forensics' }] : []),
                         { id: 'details-basic', label: 'Basic properties' },
+                        { id: 'details-cyberchef', label: '🧙 Universal CyberChef Decoder' },
                         { id: 'details-history', label: 'History' },
                         { id: 'details-names', label: 'Names' },
                         { id: 'details-yara', label: 'YARA Rules & Signatures' },
@@ -1411,6 +1437,13 @@ export const Results: React.FC = () => {
                 {/* Main Details Sections for Files */}
                 <div style={{ gridColumn: 'span 9', display: 'flex', flexDirection: 'column', gap: '28px' }}>
 
+                  {/* Magic Discrepancy Alert */}
+                  {magicDiscrepancy && magicDiscrepancy.hasDiscrepancy && (
+                    <div id="details-magic-alert">
+                      <MagicDiscrepancyBanner discrepancy={magicDiscrepancy} />
+                    </div>
+                  )}
+
                   {/* Image Forensics */}
                   {isImage && imageForensics && (
                     <div id="details-image-forensics">
@@ -1445,6 +1478,46 @@ export const Results: React.FC = () => {
                       <ArchiveForensicsCard report={archiveForensics} />
                     </div>
                   )}
+
+                  {/* Windows PE Executable Forensics */}
+                  {peForensics && (
+                    <div id="details-pe-forensics">
+                      <PeExecutableCard report={peForensics} />
+                    </div>
+                  )}
+
+                  {/* Linux ELF Executable Forensics */}
+                  {elfForensics && (
+                    <div id="details-elf-forensics">
+                      <ElfExecutableCard report={elfForensics} />
+                    </div>
+                  )}
+
+                  {/* Android APK Forensics */}
+                  {apkForensics && (
+                    <div id="details-apk-forensics">
+                      <ApkForensicsCard report={apkForensics} />
+                    </div>
+                  )}
+
+                  {/* Email Forensics */}
+                  {emailForensics && (
+                    <div id="details-email-forensics">
+                      <EmailForensicsCard report={emailForensics} />
+                    </div>
+                  )}
+
+                  {/* PCAP Forensics */}
+                  {pcapForensics && (
+                    <div id="details-pcap-forensics">
+                      <PcapForensicsCard report={pcapForensics} />
+                    </div>
+                  )}
+
+                  {/* CyberChef Interactive Module */}
+                  <div id="details-cyberchef">
+                    <CyberChefModule />
+                  </div>
 
                   {/* Basic Properties */}
                   <div id="details-basic" style={{ background: '#111927', border: '1px solid #1e293b', borderRadius: '10px', padding: '28px 32px' }}>
@@ -1725,6 +1798,11 @@ export const Results: React.FC = () => {
           }}>
             {/* 1. Atlas AI Verdict & Remediation */}
             <AiSummary threatData={fileResult || analysisResult || domainResult || ipResult} type={isFile ? 'file' : 'url'} />
+
+            {/* 1b. Magic Discrepancy Alert */}
+            {isFile && magicDiscrepancy && magicDiscrepancy.hasDiscrepancy && (
+              <MagicDiscrepancyBanner discrepancy={magicDiscrepancy} />
+            )}
             
             {/* 2. Specialized Media & Document Forensics Engine for Files */}
             {isFile && isImage && imageForensics && (
@@ -1747,6 +1825,26 @@ export const Results: React.FC = () => {
               <ArchiveForensicsCard report={archiveForensics} />
             )}
 
+            {isFile && peForensics && (
+              <PeExecutableCard report={peForensics} />
+            )}
+
+            {isFile && elfForensics && (
+              <ElfExecutableCard report={elfForensics} />
+            )}
+
+            {isFile && apkForensics && (
+              <ApkForensicsCard report={apkForensics} />
+            )}
+
+            {isFile && emailForensics && (
+              <EmailForensicsCard report={emailForensics} />
+            )}
+
+            {isFile && pcapForensics && (
+              <PcapForensicsCard report={pcapForensics} />
+            )}
+
             {/* 3. Automatic YARA Rule Pattern Matcher for Files */}
             {isFile && (
               <AutomaticYaraCard 
@@ -1754,6 +1852,9 @@ export const Results: React.FC = () => {
                 crowdsourcedYara={fileResult?.extended?.crowdsourcedYara}
               />
             )}
+
+            {/* 3b. Interactive Universal CyberChef Decoder */}
+            <CyberChefModule />
 
             {/* 4. Multi-Source Threat Feeds */}
             <ThreatFeedCard target={displayTitle} threatScore={score} tags={fileResult?.tags} />
