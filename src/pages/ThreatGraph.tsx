@@ -524,29 +524,6 @@ export const ThreatGraph: React.FC = () => {
             </button>
           </form>
 
-          {/* Preset Buttons */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#64748b', fontFamily: 'var(--font-mono)' }}>Presets:</span>
-            {PRESET_CLUSTERS.map((p, idx) => (
-              <button
-                key={idx}
-                onClick={() => loadPreset(idx)}
-                style={{
-                  background: 'rgba(129,140,248,0.1)',
-                  border: '1px solid rgba(129,140,248,0.3)',
-                  color: '#818cf8',
-                  padding: '5px 10px',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                  fontFamily: 'var(--font-mono)',
-                  cursor: 'pointer'
-                }}
-              >
-                {p.name.split(' ')[0]}
-              </button>
-            ))}
-          </div>
-
         </div>
       </div>
 

@@ -20,13 +20,6 @@ interface IocResult {
   error?: string;
 }
 
-const SAMPLE_IOCS = `# Paste IOCs below — one per line (IPs, domains, URLs, hashes)
-185.220.101.45
-wannacry.exe
-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-malware.example.com
-http://evil-phish.ru/steal.php`;
-
 function parseIocInput(raw: string): IocEntry[] {
   return raw
     .split('\n')
@@ -120,7 +113,7 @@ const VerdictBadge: React.FC<{ verdict: IocResult['verdict'] }> = ({ verdict }) 
 };
 
 export const IocHunter: React.FC = () => {
-  const [iocInput, setIocInput] = useState(SAMPLE_IOCS);
+  const [iocInput, setIocInput] = useState('');
   const [results, setResults] = useState<IocResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);

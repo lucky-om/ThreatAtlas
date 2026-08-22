@@ -128,13 +128,6 @@ export const AiChatbot: React.FC = () => {
     setTimeout(() => setCopiedCodeIdx(null), 2000);
   };
 
-  const QUICK_PROMPTS = [
-    '✨ Write a YARA rule for Cobalt Strike beacon',
-    '🔍 Explain PE header entropy & section packers',
-    '🛡️ How to analyze suspicious image steganography',
-    '💀 WannaCry EternalBlue killswitch breakdown',
-  ];
-
   const renderFormatted = (text: string) => {
     // Check for code blocks ```...```
     const parts = text.split(/(```[\s\S]*?```)/g);
@@ -352,37 +345,6 @@ export const AiChatbot: React.FC = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Threat Prompts Chips */}
-          <div style={{
-            padding: '8px 16px', background: 'rgba(0,0,0,0.3)',
-            borderTop: '1px solid rgba(255,255,255,0.04)',
-            display: 'flex', gap: '6px', overflowX: 'auto', whiteSpace: 'nowrap'
-          }}>
-            {QUICK_PROMPTS.map((qp, qIdx) => (
-              <button
-                key={qIdx}
-                onClick={() => sendMessage(qp)}
-                disabled={loading}
-                style={{
-                  background: 'rgba(185,66,255,0.08)',
-                  border: '1px solid rgba(185,66,255,0.25)',
-                  color: '#cbd5e1',
-                  padding: '4px 10px',
-                  borderRadius: '999px',
-                  fontSize: '11px',
-                  fontFamily: 'var(--font-mono)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  flexShrink: 0
-                }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = '#00f2ff'; e.currentTarget.style.color = '#ffffff'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(185,66,255,0.25)'; e.currentTarget.style.color = '#cbd5e1'; }}
-              >
-                {qp}
-              </button>
-            ))}
-          </div>
-
           {/* Footer Input Bar */}
           <div style={{
             padding: '12px 16px', background: 'rgba(0,0,0,0.5)',
@@ -393,7 +355,7 @@ export const AiChatbot: React.FC = () => {
               ref={inputRef}
               type="text"
               className="input-field font-data-mono"
-              placeholder="Ask Atlas about malware, YARA, CVEs, or say hi 😉..."
+              placeholder="Ask Atlas cybersecurity intelligence..."
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') sendMessage(); }}
