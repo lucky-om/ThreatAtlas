@@ -47,17 +47,32 @@ try {
   console.warn('[Queue] BullMQ init failed — Redis may not be running. Direct scan mode active.', err.message);
 }
 
+// Security Headers Middleware
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
+
 // Body parsing — 40MB limit for base64-encoded file uploads via queue API
 app.use(express.json({ limit: '40mb' }));
 app.use(express.urlencoded({ extended: true, limit: '40mb' }));
-// Multipart handled by built-in express raw for the upload endpoint
-app.use('/api/scan/file', express.raw({ type: 'multipart/form-data', limit: '35mb' }));
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Unified AI Chatbot endpoint — Groq with Gemini Fallback
 // ─────────────────────────────────────────────────────────────────────────────
 app.post('/api/ai/chat', async (req, res) => {
-  const { messages } = req.body || { messages: [] };
+  let { messages } = req.body || { messages: [] };
+  if (!Array.isArray(messages)) messages = [];
+
+  // Sanitize & bound messages to prevent memory/token abuse
+  const sanitizedMessages = messages.slice(-15).map(m => ({
+    role: m.role === 'assistant' ? 'assistant' : m.role === 'system' ? 'system' : 'user',
+    content: typeof m.content === 'string' ? m.content.slice(0, 4000) : ''
+  })).filter(m => m.content.trim().length > 0);
+
   try {
     if (GROQ_API_KEY) {
       try {
@@ -69,7 +84,7 @@ app.post('/api/ai/chat', async (req, res) => {
           },
           body: JSON.stringify({
             model: 'openai/gpt-oss-120b',
-            messages: messages,
+            messages: sanitizedMessages,
             max_tokens: 800,
             temperature: 0.7,
           })
@@ -89,7 +104,7 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 
     if (GEMINI_API_KEY) {
-      const lastUserMsg = (messages || []).filter(m => m.role === 'user').pop()?.content || '';
+      const lastUserMsg = sanitizedMessages.filter(m => m.role === 'user').pop()?.content || '';
       const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -119,20 +134,22 @@ app.use(express.static(path.join(__dirname, 'dist')));
 // Task Queue Endpoints — /api/scan/*
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * POST /api/scan/file
- * Body: multipart/form-data with field `file`
- * Returns: { task_id, status: "queued", poll_url }
- *
- * The file is serialised to base64 and enqueued in BullMQ.
- * If Redis is unavailable, falls back to a direct synchronous VT upload
- * and stores the pending analysis_id in a local Map for polling.
- */
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 33 * 1024 * 1024 } });
 
-// In-memory fallback store for when Redis / BullMQ is unavailable
-const pendingTasks = new Map(); // taskId → { status, progress, report?, error?, analysisId? }
+// In-memory fallback store with TTL cleanup to prevent memory leaks
+const pendingTasks = new Map(); // taskId → { status, progress, report?, error?, analysisId?, createdAtTime }
+
+// Clean up pendingTasks older than 2 hours every 30 minutes
+setInterval(() => {
+  const now = Date.now();
+  const TWO_HOURS = 2 * 60 * 60 * 1000;
+  for (const [id, task] of pendingTasks.entries()) {
+    if (task.createdAtTime && (now - task.createdAtTime > TWO_HOURS)) {
+      pendingTasks.delete(id);
+    }
+  }
+}, 30 * 60 * 1000).unref();
 
 app.post('/api/scan/file', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file provided. Use field name \'file\'.' });
@@ -402,7 +419,10 @@ app.get('/api/scan/queue-health', async (req, res) => {
 // FIX: Properly extract IP from /geo-ip/:ip and forward to ip-api.com/json/:ip
 // ─────────────────────────────────────────────────────────────────────────────
 app.get('/geo-ip/:ip', async (req, res) => {
-  const ip = req.params.ip;
+  const ip = (req.params.ip || '').trim();
+  if (!/^([0-9a-fA-F:.]+)$/.test(ip)) {
+    return res.status(400).json({ error: 'Invalid IP address parameter' });
+  }
   try {
     const response = await fetch(`http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,query`);
     const data = await response.json();
@@ -462,8 +482,14 @@ app.use(
 // Used by WebScan module for DNS record lookups
 // ─────────────────────────────────────────────────────────────────────────────
 app.get('/api/dns', async (req, res) => {
-  const { name, type = 'A' } = req.query;
-  if (!name) return res.status(400).json({ error: 'Missing name parameter' });
+  const name = (req.query.name || '').toString().trim();
+  const rawType = (req.query.type || 'A').toString().toUpperCase().trim();
+  const allowedTypes = ['A', 'AAAA', 'MX', 'TXT', 'NS', 'CNAME', 'SOA', 'PTR', 'CAA'];
+  const type = allowedTypes.includes(rawType) ? rawType : 'A';
+
+  if (!name || !/^[a-zA-Z0-9.-]+$/.test(name)) {
+    return res.status(400).json({ error: 'Invalid or missing name parameter' });
+  }
   try {
     const response = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(name)}&type=${encodeURIComponent(type)}`, {
       headers: { 'Accept': 'application/dns-json' }
@@ -481,7 +507,10 @@ app.get('/api/dns', async (req, res) => {
 // Used by WebScan module for WHOIS data
 // ─────────────────────────────────────────────────────────────────────────────
 app.get('/api/rdap/:domain', async (req, res) => {
-  const { domain } = req.params;
+  const domain = (req.params.domain || '').trim();
+  if (!domain || !/^[a-zA-Z0-9.-]+$/.test(domain)) {
+    return res.status(400).json({ error: 'Invalid domain parameter' });
+  }
   try {
     const response = await fetch(`https://rdap.org/domain/${encodeURIComponent(domain)}`, {
       headers: { 'Accept': 'application/rdap+json' }
@@ -500,7 +529,10 @@ app.get('/api/rdap/:domain', async (req, res) => {
 // Used by WebScan module to fetch known certificates for a domain
 // ─────────────────────────────────────────────────────────────────────────────
 app.get('/api/certsh/:domain', async (req, res) => {
-  const { domain } = req.params;
+  const domain = (req.params.domain || '').trim();
+  if (!domain || !/^[a-zA-Z0-9.-]+$/.test(domain)) {
+    return res.status(400).json({ error: 'Invalid domain parameter' });
+  }
   try {
     const response = await fetch(`https://crt.sh/?q=${encodeURIComponent(domain)}&output=json`);
     if (!response.ok) throw new Error(`crt.sh returned ${response.status}`);

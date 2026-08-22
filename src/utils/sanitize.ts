@@ -140,11 +140,10 @@ export function formatRelativeTime(timestamp?: number | string | null): string {
  * Formats byte size into human-readable string with byte count, e.g. "17.08 KB (17496 bytes)"
  */
 export function formatBytes(bytes?: number): string {
-  if (bytes === undefined || bytes === null || isNaN(bytes)) return '0 B';
-  if (bytes === 0) return '0 B (0 bytes)';
+  if (bytes === undefined || bytes === null || isNaN(bytes) || bytes <= 0) return '0 B (0 bytes)';
 
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  const i = Math.min(units.length - 1, Math.max(0, Math.floor(Math.log(bytes) / Math.log(1024))));
   const formatted = (bytes / Math.pow(1024, i)).toFixed(2);
   const unit = units[i] || 'B';
 

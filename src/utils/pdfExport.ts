@@ -232,36 +232,39 @@ export function generatePdfThreatReport(options: ExportReportOptions): void {
   // ── 4. SPECIALIZED FORENSIC TELEMETRY ─────────────────────────────────────
   
   // A. Image Forensics
-  if (imageForensics) {
+  if (imageForensics && imageForensics.geometry) {
     renderSectionHeader('Image Forensics, Steganography & EXIF Telemetry', '🖼️');
+    const signalsText = (imageForensics.stego?.signals || []).map((s: any) => s.label).join('; ') || 'No anomalous payload found.';
     renderCardKeyValue([
-      ['Geometry (Dimensions):', `${imageForensics.geometry.width}x${imageForensics.geometry.height} (${imageForensics.geometry.aspectRatio}) · ${imageForensics.geometry.megapixels}`],
-      ['Color Space & Depth:', `${imageForensics.geometry.colorSpace} · ${imageForensics.geometry.bitsPerSample || '8'} bits`],
-      ['Steganography Risk Index:', `${imageForensics.stego.riskScore}/100 (${imageForensics.stego.riskLevel.toUpperCase()})`],
-      ['Stego Artifact Anomalies:', imageForensics.stego.anomalies?.join('; ') || 'No anomalous payload found.'],
-      ['Camera Make & Model:', imageForensics.cameraExif.make ? `${imageForensics.cameraExif.make} ${imageForensics.cameraExif.model || ''}` : 'Metadata Stripped / Anonymized'],
-      ['Perceptual Hashes:', `dHash: ${imageForensics.hashes.dhash || 'N/A'} | pHash: ${imageForensics.hashes.phash || 'N/A'}`]
+      ['Geometry (Dimensions):', `${imageForensics.geometry.width || 0}x${imageForensics.geometry.height || 0} (${imageForensics.geometry.aspectRatio || 'N/A'}) · ${imageForensics.geometry.megapixels || 'N/A'}`],
+      ['Color Space & Depth:', `${imageForensics.geometry.colorSpace || 'sRGB'} · ${imageForensics.geometry.bitsPerSample || '8'} bits`],
+      ['Steganography Risk Index:', `${imageForensics.stego?.riskScore || 0}/100 (${String(imageForensics.stego?.riskLevel || 'clean').toUpperCase()})`],
+      ['Stego Artifact Anomalies:', signalsText],
+      ['Camera Make & Model:', imageForensics.cameraExif?.make ? `${imageForensics.cameraExif.make} ${imageForensics.cameraExif.model || ''}` : 'Metadata Stripped / Anonymized'],
+      ['Perceptual Hashes:', `dHash: ${imageForensics.hashes?.dhash || 'N/A'} | pHash: ${imageForensics.hashes?.phash || 'N/A'}`]
     ]);
   }
 
   // B. Audio Forensics
   if (audioForensics) {
     renderSectionHeader('Audio Stream Forensics & ID3 Telemetry', '🎧');
+    const audioSignals = (audioForensics.stego?.signals || []).map((s: any) => s.label).join('; ') || 'Clean stream boundaries.';
     renderCardKeyValue([
-      ['Audio Format & Codec:', `${audioForensics.format} (${audioForensics.codec || 'Native'})`],
+      ['Audio Format & Codec:', `${audioForensics.format || 'Audio'} (${audioForensics.codec || 'Native'})`],
       ['Bitrate & Sampling:', `${audioForensics.bitrate || 'N/A'} · ${audioForensics.sampleRate || '44.1 kHz'} · ${audioForensics.channels || 'Stereo'}`],
       ['ID3 Metadata Tags:', `Title: ${audioForensics.id3?.title || '—'} | Artist: ${audioForensics.id3?.artist || '—'} | Year: ${audioForensics.id3?.year || '—'}`],
-      ['Stego / Post-EOF Signal:', audioForensics.stegoSignal || 'Clean stream boundaries.']
+      ['Stego / Post-EOF Signal:', audioSignals]
     ]);
   }
 
   // C. Video Forensics
-  if (videoForensics) {
+  if (videoForensics && videoForensics.dimensions) {
     renderSectionHeader('Video Stream & Container Codec Forensics', '🎬');
+    const videoSignals = (videoForensics.stego?.signals || []).map((s: any) => s.label).join('; ') || 'Valid atom container.';
     renderCardKeyValue([
-      ['Resolution & Codecs:', `${videoForensics.dimensions.width}x${videoForensics.dimensions.height} (${videoForensics.dimensions.aspectRatio}) | Video: ${videoForensics.codecs.video} | Audio: ${videoForensics.codecs.audio}`],
-      ['Framerate & Streams:', `${videoForensics.codecs.frameRate} · Duration: ${videoForensics.codecs.duration || 'N/A'}`],
-      ['Container Integrity:', videoForensics.integrity || 'Valid atom container.']
+      ['Resolution & Codecs:', `${videoForensics.dimensions.width || 0}x${videoForensics.dimensions.height || 0} (${videoForensics.dimensions.aspectRatio || 'N/A'}) | Video: ${videoForensics.videoCodec || 'H.264'} | Audio: ${videoForensics.audioCodec || 'AAC'}`],
+      ['Framerate & Streams:', `${videoForensics.frameRate || '30 fps'} · Duration: ${videoForensics.duration || 'N/A'}`],
+      ['Container Integrity:', videoSignals]
     ]);
   }
 
@@ -269,22 +272,25 @@ export function generatePdfThreatReport(options: ExportReportOptions): void {
   if (docForensics) {
     renderSectionHeader('Document Security, Macros & Object Streams', '📄');
     renderCardKeyValue([
-      ['Document Format:', docForensics.formatName],
+      ['Document Format:', docForensics.formatName || 'Document'],
       ['Page Count / Layout:', String(docForensics.pageCount || '1 page')],
       ['VBA Macros Status:', docForensics.hasMacros ? 'DETECTED (HIGH RISK MALICIOUS MACRO)' : 'None (No macros detected)'],
       ['Embedded JavaScript / Actions:', docForensics.hasJavaScript || docForensics.hasEmbeddedActions ? 'DETECTED (Active script directive)' : 'None'],
-      ['Document Threat Score:', `${docForensics.threatScore}/100 (${docForensics.threatLevel.toUpperCase()})`]
+      ['Document Threat Score:', `${docForensics.threatScore || 0}/100 (${String(docForensics.threatLevel || 'clean').toUpperCase()})`]
     ]);
   }
 
   // E. Archive Forensics
   if (archiveForensics) {
     renderSectionHeader('Archive & Compressed Container Forensics', '📦');
+    const compRatioStr = typeof archiveForensics.compressionRatio === 'number' 
+      ? `${archiveForensics.compressionRatio.toFixed(1)}:1` 
+      : String(archiveForensics.compressionRatio || '1.0:1');
     renderCardKeyValue([
-      ['Archive Container Format:', archiveForensics.archiveType],
-      ['Contained Files Count:', `${archiveForensics.fileCount} files`],
+      ['Archive Container Format:', archiveForensics.archiveType || 'Archive'],
+      ['Contained Files Count:', `${archiveForensics.fileCount || 0} files`],
       ['Uncompressed Magnitude:', formatBytes(archiveForensics.uncompressedSize)],
-      ['Compression Ratio / Bomb Check:', `${archiveForensics.compressionRatio.toFixed(1)}:1 (${archiveForensics.isPotentialZipBomb ? 'FLAGGED ZIP BOMB' : 'Normal Ratio'})`],
+      ['Compression Ratio / Bomb Check:', `${compRatioStr} (${archiveForensics.isPotentialZipBomb ? 'FLAGGED ZIP BOMB' : 'Normal Ratio'})`],
       ['Nested Droppers / Scripts:', archiveForensics.hasExecutables ? 'EXECUTABLES FOUND' : archiveForensics.hasScripts ? 'SCRIPTS FOUND' : 'Clean Archives']
     ]);
   }
