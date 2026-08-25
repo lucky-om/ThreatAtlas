@@ -418,3 +418,48 @@ export function analyzeWithPhishGuard(rawUrl: string): PhishGuardResult {
     tld,
   };
 }
+
+// ── Async Analyzer: Merges Local Heuristics with Live API ───────────────────────
+export async function analyzePhishGuardLive(url: string): Promise<PhishGuardResult> {
+  const localResult = analyzeWithPhishGuard(url);
+  
+  try {
+    const res = await fetch('/api/phishguard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    
+    if (res.ok) {
+      const apiData = await res.json();
+      
+      // Merge external API findings with local heuristics
+      // Assuming apiData returns something like { riskScore, flags: [{ message, type }] }
+      if (apiData.flags && Array.isArray(apiData.flags)) {
+        for (const flag of apiData.flags) {
+          localResult.flags.push({
+            type: flag.type || 'warning',
+            message: `[Live Intel] ${flag.message || 'Suspicious indicator'}`,
+            category: flag.category || 'External Threat Intel'
+          });
+        }
+      }
+      
+      if (typeof apiData.riskScore === 'number') {
+        // Boost local risk score based on live intel
+        localResult.riskScore = Math.min(10, Math.max(localResult.riskScore, apiData.riskScore));
+      }
+      
+      // Recalculate Risk Level
+      if (localResult.riskScore >= 7) localResult.riskLevel = 'Critical';
+      else if (localResult.riskScore >= 5) localResult.riskLevel = 'High';
+      else if (localResult.riskScore >= 3) localResult.riskLevel = 'Medium';
+      else if (localResult.riskScore >= 1) localResult.riskLevel = 'Low';
+      else localResult.riskLevel = 'Safe';
+    }
+  } catch (err) {
+    console.warn('[PhishGuard Live] Failed to fetch live intel. Falling back to local heuristics.', err);
+  }
+  
+  return localResult;
+}

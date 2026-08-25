@@ -8,14 +8,15 @@ interface WebFoxCardProps {
 }
 
 export const WebFoxCard: React.FC<WebFoxCardProps> = ({ recon, loading }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'dns' | 'subdomains' | 'tech' | 'headers'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'dns' | 'subs' | 'tech' | 'headers' | 'crawl'>('overview');
 
   const tabs: Array<{ id: typeof activeTab; label: string; icon: string; count?: number }> = [
-    { id: 'overview',   label: 'Overview',   icon: 'analytics' },
-    { id: 'dns',        label: 'DNS',        icon: 'dns',        count: recon.dnsRecords?.length },
-    { id: 'subdomains', label: 'Subdomains', icon: 'account_tree', count: recon.subdomains?.length },
-    { id: 'tech',       label: 'Tech Stack', icon: 'code_blocks', count: recon.techStack?.detectedTechs?.length },
-    { id: 'headers',    label: 'Headers',    icon: 'security',   count: recon.securityHeaders?.filter(h => h.present).length },
+    { id: 'overview', label: 'OVERVIEW', icon: 'dashboard' },
+    { id: 'dns',      label: 'DNS',      icon: 'dns',       count: recon.dnsRecords?.length },
+    { id: 'subs',     label: 'SUBS',     icon: 'lan',       count: recon.subdomains?.length },
+    { id: 'tech',     label: 'STACK',    icon: 'memory',    count: recon.techStack?.detectedTechs?.length },
+    { id: 'headers',  label: 'HEADERS',  icon: 'security',  count: recon.securityHeaders?.filter(h => h.present).length },
+    { id: 'crawl',    label: 'CRAWL',    icon: 'spider',    count: (recon.crawl?.jsSecrets?.length || 0) + (recon.crawl?.jsEndpoints?.length || 0) }
   ];
 
   const criticalPaths  = recon.techStack?.exposedPaths?.filter(p => p.risk === 'critical') ?? [];
@@ -161,7 +162,7 @@ export const WebFoxCard: React.FC<WebFoxCardProps> = ({ recon, loading }) => {
           )}
 
           {/* ── SUBDOMAINS TAB ── */}
-          {activeTab === 'subdomains' && (
+          {activeTab === 'subs' && (
             <div>
               <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'var(--font-mono)', marginBottom: '10px' }}>
                 Sources: crt.sh Certificate Transparency · HackerTarget · AlienVault OTX Passive DNS
@@ -275,6 +276,79 @@ export const WebFoxCard: React.FC<WebFoxCardProps> = ({ recon, loading }) => {
                   <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: '#64748b' }}>+{hdr.weight}pt</span>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* ── CRAWL TAB ── */}
+          {activeTab === 'crawl' && recon.crawl && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              
+              {/* JS Secrets */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#ff2a5f' }}>key</span>
+                  <span className="font-label-caps text-on-surface" style={{ fontSize: '11px' }}>JS Secrets & API Keys</span>
+                  <span style={{ marginLeft: 'auto', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', fontSize: '10px' }}>{recon.crawl.jsSecrets.length} found</span>
+                </div>
+                {recon.crawl.jsSecrets.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {recon.crawl.jsSecrets.map((sec, i) => (
+                      <div key={i} style={{ background: 'rgba(255,42,95,0.05)', border: '1px solid rgba(255,42,95,0.1)', padding: '8px', borderRadius: '6px' }}>
+                        <div style={{ fontSize: '10px', color: '#ff2a5f', fontWeight: 700, marginBottom: '4px' }}>{sec.type}</div>
+                        <div className="font-data-mono" style={{ fontSize: '11px', color: '#e2e8f0', wordBreak: 'break-all' }}>{sec.value}</div>
+                        <div style={{ fontSize: '9px', color: '#64748b', marginTop: '4px', textAlign: 'right' }}>Found in: {sec.file}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>No hardcoded secrets detected in JS.</div>
+                )}
+              </div>
+
+              {/* API Endpoints */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--primary)' }}>api</span>
+                  <span className="font-label-caps text-on-surface" style={{ fontSize: '11px' }}>Extracted API Endpoints</span>
+                  <span style={{ marginLeft: 'auto', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', fontSize: '10px' }}>{recon.crawl.jsEndpoints.length} found</span>
+                </div>
+                {recon.crawl.jsEndpoints.length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {recon.crawl.jsEndpoints.map((ep, i) => (
+                      <span key={i} className="font-data-mono" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', color: '#e2e8f0' }}>
+                        {ep}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>No inline endpoints detected.</div>
+                )}
+              </div>
+
+              {/* Robots & Sitemap */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface)', marginBottom: '6px' }}>Robots.txt</div>
+                  {recon.crawl.robots.found ? (
+                    <div>
+                      <div style={{ fontSize: '10px', color: '#94a3b8' }}>Disallowed: {recon.crawl.robots.disallowed.length}</div>
+                      {recon.crawl.robots.flagged.length > 0 && (
+                        <div style={{ fontSize: '10px', color: '#ff2a5f', marginTop: '4px' }}>⚠ High Risk: {recon.crawl.robots.flagged.length} paths</div>
+                      )}
+                    </div>
+                  ) : <div style={{ fontSize: '10px', color: '#64748b' }}>Not found</div>}
+                </div>
+
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface)', marginBottom: '6px' }}>Sitemap.xml</div>
+                  {recon.crawl.sitemap.found ? (
+                    <div>
+                      <div style={{ fontSize: '10px', color: '#94a3b8' }}>Discovered URLs: {recon.crawl.sitemap.urls.length}</div>
+                    </div>
+                  ) : <div style={{ fontSize: '10px', color: '#64748b' }}>Not found</div>}
+                </div>
+              </div>
+
             </div>
           )}
         </>

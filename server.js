@@ -611,6 +611,60 @@ app.use(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// General Proxy Endpoint (Bypass CORS)
+// Used by WebFox Crawl modules (JS, Robots, Sitemap, IP-API, Whois)
+// ─────────────────────────────────────────────────────────────────────────────
+app.get('/api/proxy', async (req, res) => {
+  const targetUrl = req.query.url;
+  if (!targetUrl) return res.status(400).json({ error: 'Missing url parameter' });
+  
+  try {
+    const response = await fetch(targetUrl, {
+      method: 'GET',
+      headers: { 'User-Agent': 'Mozilla/5.0 (ThreatAtlas/2.0)' },
+      redirect: 'follow'
+    });
+    
+    // Copy the content type if possible
+    const contentType = response.headers.get('content-type');
+    if (contentType) res.setHeader('Content-Type', contentType);
+    
+    if (response.status >= 400) {
+      return res.status(response.status).send(await response.text());
+    }
+    
+    const text = await response.text();
+    res.send(text);
+  } catch (err) {
+    console.error('[Proxy Error]', err.message);
+    res.status(500).json({ error: 'Proxy request failed', details: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PhishGuard External API Proxy
+// Proxies to https://phishguard.luckyverse.tech/analyzer
+// ─────────────────────────────────────────────────────────────────────────────
+app.post('/api/phishguard', async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ error: 'Missing url in body' });
+  
+  try {
+    const response = await fetch('https://phishguard.luckyverse.tech/analyzer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    console.error('[PhishGuard Proxy Error]', err.message);
+    res.status(500).json({ error: 'PhishGuard API request failed', details: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // SPA Fallback — serve index.html for all React routes in production
 // FIX: No longer references a missing 404.html file
 // ─────────────────────────────────────────────────────────────────────────────

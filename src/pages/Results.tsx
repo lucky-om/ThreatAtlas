@@ -21,7 +21,7 @@ import {
 import { RelationsCard } from '../components/RelationsCard';
 import { BehaviorCard } from '../components/BehaviorCard';
 import { CommunityCommentsCard } from '../components/CommunityCommentsCard';
-import { analyzeWithPhishGuard, PhishGuardResult } from '../services/phishguard';
+import { analyzePhishGuardLive, PhishGuardResult } from '../services/phishguard';
 import { runWebFoxRecon, WebFoxReconResult } from '../services/webfox';
 import { PhishGuardCard } from '../components/PhishGuardCard';
 import { WebFoxCard } from '../components/WebFoxCard';
@@ -277,7 +277,7 @@ export const Results: React.FC = () => {
           });
 
           if (analysisData.url) {
-            setPhishResult(analyzeWithPhishGuard(analysisData.url));
+            setPhishResult(await analyzePhishGuardLive(analysisData.url));
             setIsWebfoxLoading(true);
             runWebFoxRecon(analysisData.url)
               .then(wf => setWebfoxResult(wf))
@@ -313,7 +313,7 @@ export const Results: React.FC = () => {
       if (isPlainDomain) {
         setLiveStage('Querying authoritative DNS records, RDAP WHOIS, and SSL certificates...');
         const targetUrl = `https://${target}`;
-        setPhishResult(analyzeWithPhishGuard(targetUrl));
+        setPhishResult(await analyzePhishGuardLive(targetUrl));
         setIsWebfoxLoading(true);
         runWebFoxRecon(targetUrl)
           .then(wf => setWebfoxResult(wf))
@@ -340,7 +340,7 @@ export const Results: React.FC = () => {
       // ── 5. URL Search / Direct Submission ─────────────────────────────────
       setLiveStage('Evaluating URL structure, HTTP response headers, and phishing telemetry...');
       const targetUrl = target.startsWith('http') ? target : `https://${target}`;
-      setPhishResult(analyzeWithPhishGuard(targetUrl));
+      setPhishResult(await analyzePhishGuardLive(targetUrl));
       setIsWebfoxLoading(true);
       runWebFoxRecon(targetUrl)
         .then(wf => setWebfoxResult(wf))

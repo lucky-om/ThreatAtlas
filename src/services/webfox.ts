@@ -59,6 +59,14 @@ export interface WebFoxReconResult {
   httpStatus?: number;
   latencyMs?: number;
   techStack?: TechStackResult;
+  crawl?: WebFoxCrawlResult;
+}
+
+export interface WebFoxCrawlResult {
+  robots: { found: boolean; disallowed: string[]; flagged: string[]; raw?: string };
+  sitemap: { found: boolean; urls: string[]; source?: string };
+  jsSecrets: Array<{ type: string; value: string; file: string }>;
+  jsEndpoints: string[];
 }
 
 // ── DNS Type ID Mapping ────────────────────────────────────────────────────────
@@ -485,6 +493,9 @@ export async function runWebFoxRecon(targetUrlOrDomain: string): Promise<WebFoxR
 
   // Default security headers audit (no actual headers available from browser for the target)
   const defaultHeaderAudit = auditSecurityHeaders({});
+    
+  // 6. WebFox Crawl (Robots, Sitemap, JS Analysis)
+  const crawl = await runWebFoxCrawl(cleanDomain);
 
   return {
     domain: cleanDomain,
@@ -498,5 +509,152 @@ export async function runWebFoxRecon(targetUrlOrDomain: string): Promise<WebFoxR
     serverBanner: techStack.serverBanner !== 'Unknown' ? techStack.serverBanner : undefined,
     latencyMs,
     techStack,
+    crawl
   };
+}
+
+// ── WebFox Crawl (Robots, Sitemap, JS Scanning) ────────────────────────────────
+
+async function runWebFoxCrawl(domain: string): Promise<WebFoxCrawlResult> {
+  const result: WebFoxCrawlResult = {
+    robots: { found: false, disallowed: [], flagged: [] },
+    sitemap: { found: false, urls: [] },
+    jsSecrets: [],
+    jsEndpoints: []
+  };
+
+  try {
+    // We proxy through backend to avoid CORS limitations on text fetching
+    const fetchProxy = async (url: string) => {
+      const res = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
+      if (!res.ok) throw new Error('Proxy fetch failed');
+      return await res.text();
+    };
+
+    // 1. Robots.txt Analysis
+    try {
+      const robotsTxt = await fetchProxy(`https://${domain}/robots.txt`);
+      result.robots.found = true;
+      result.robots.raw = robotsTxt.substring(0, 5000); // cap size
+      
+      const lines = robotsTxt.split('\n');
+      for (const line of lines) {
+        const stripped = line.trim();
+        if (stripped.toLowerCase().startsWith('disallow:')) {
+          const path = stripped.substring(9).trim();
+          if (path) {
+            result.robots.disallowed.push(path);
+            const riskKeywords = ['/admin', '/wp-admin', '/phpmyadmin', '/login', '/backup', '/private', '/secret', '/db', '/api'];
+            if (riskKeywords.some(rk => path.toLowerCase().includes(rk))) {
+              result.robots.flagged.push(path);
+            }
+          }
+        }
+      }
+    } catch {}
+
+    // 2. Sitemap Discovery
+    try {
+      // First try robots.txt for sitemap location
+      let sitemapUrl = `https://${domain}/sitemap.xml`;
+      if (result.robots.raw) {
+        const smMatch = result.robots.raw.match(/Sitemap:\s*(https?:\/\/[^\s]+)/i);
+        if (smMatch && smMatch[1]) sitemapUrl = smMatch[1];
+      }
+
+      const sitemapTxt = await fetchProxy(sitemapUrl);
+      result.sitemap.found = true;
+      result.sitemap.source = sitemapUrl;
+      
+      // Extract <loc> tags
+      const locRegex = /<loc>(.*?)<\/loc>/gi;
+      let match;
+      let count = 0;
+      while ((match = locRegex.exec(sitemapTxt)) !== null && count < 200) {
+        if (match[1]) result.sitemap.urls.push(match[1].trim());
+        count++;
+      }
+    } catch {}
+
+    // 3. JavaScript Secret Scanning (Inline & External)
+    try {
+      const homeHtml = await fetchProxy(`https://${domain}/`);
+      
+      const jsUrls = new Set<string>();
+      // Find scripts in HTML
+      const scriptRegex = /src=["'](.*?.js.*?)["']/gi;
+      let match;
+      while ((match = scriptRegex.exec(homeHtml)) !== null) {
+        let jsUrl = match[1];
+        if (jsUrl.startsWith('//')) jsUrl = 'https:' + jsUrl;
+        else if (jsUrl.startsWith('/')) jsUrl = `https://${domain}${jsUrl}`;
+        else if (!jsUrl.startsWith('http')) jsUrl = `https://${domain}/${jsUrl}`;
+        jsUrls.add(jsUrl);
+      }
+      
+      // Check common chunk paths if none found
+      if (jsUrls.size === 0) {
+        jsUrls.add(`https://${domain}/static/js/main.js`);
+        jsUrls.add(`https://${domain}/app.js`);
+      }
+
+      const SECRET_PATTERNS = {
+        "Google API Key": /AIza[0-9A-Za-z\-_]{35}/g,
+        "AWS Access Key ID": /AKIA[0-9A-Z]{16}/g,
+        "Stripe Live Key": /sk_live_[0-9a-zA-Z]{24,}/g,
+        "GitHub Token": /ghp_[a-zA-Z0-9]{36}/g,
+        "Slack Bot Token": /xoxb-[0-9]+-[a-zA-Z0-9]+/g,
+        "JWT Token": /eyJ[A-Za-z0-9\-_=]+\.[A-Za-z0-9\-_=]+\.?[A-Za-z0-9\-_.+/=]*/g,
+        "Firebase Config": /firebaseapp\.com/g,
+        "Mailgun API": /key-[a-zA-Z0-9]{32}/g,
+        "Twilio Auth Token": /twilio.{0,20}["']([a-f0-9]{32})["']/gi
+      };
+
+      const ENDPOINT_PATTERNS = [
+        /(?:"|'|`)\/((?:api|v\d|graphql|admin|user|auth|login)[^"'`<>]{0,100})(?:"|'|`)/gi,
+        /fetch\(["']([^"']{5,})["']/gi,
+        /axios\.(get|post)\(["']([^"']{5,})["']/gi
+      ];
+
+      // Scan up to 5 JS files to save time
+      const urlsToScan = Array.from(jsUrls).slice(0, 5);
+      
+      await Promise.allSettled(urlsToScan.map(async (jsUrl) => {
+        try {
+          const jsContent = await fetchProxy(jsUrl);
+          const srcName = jsUrl.split('/').pop()?.substring(0, 30) || 'unknown.js';
+          
+          for (const [name, pattern] of Object.entries(SECRET_PATTERNS)) {
+            let m;
+            while ((m = pattern.exec(jsContent)) !== null) {
+              const val = m[0].substring(0, 80);
+              // Avoid duplicates
+              if (!result.jsSecrets.find(s => s.value === val)) {
+                result.jsSecrets.push({ type: name, value: val, file: srcName });
+              }
+            }
+          }
+
+          for (const pattern of ENDPOINT_PATTERNS) {
+            let m;
+            while ((m = pattern.exec(jsContent)) !== null) {
+              const ep = m[1] || m[0];
+              const clean = ep.replace(/["'`]/g, '');
+              if (clean && clean.length > 2 && !clean.endsWith('.js') && !clean.endsWith('.css')) {
+                if (!result.jsEndpoints.includes(clean)) {
+                  result.jsEndpoints.push(clean.substring(0, 100));
+                }
+              }
+            }
+          }
+        } catch {}
+      }));
+      
+    } catch {}
+
+  } catch (err) {
+    console.error('[WebFox Crawl] Error:', err);
+  }
+
+  return result;
 }
