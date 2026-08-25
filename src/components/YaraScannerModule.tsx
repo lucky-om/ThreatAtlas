@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 
 // ── Built-in YARA Rule Presets (Industry Standard Threat Ruleset) ────────────
+// 28 rules covering: EICAR · Ransomware · APT · RAT · Backdoor · Exploit · Steganography ·
+// PowerShell · Office Macros · Process Injection · Anti-Analysis · UPX · Linux Persistence · DGA
 export const EXAMPLE_YARA_RULES = [
+  // ────────────────────────────────────────────────────────────────────────
+  // VALIDATION & STANDARD TESTS
+  // ────────────────────────────────────────────────────────────────────────
   {
     name: 'eicar_av_test',
     label: 'EICAR Antivirus Test Signature',
@@ -11,12 +16,15 @@ export const EXAMPLE_YARA_RULES = [
     author = "EICAR / ThreatAtlas"
     severity = "low"
   strings:
-    $eicar = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
+    $eicar = "X5O!P%@AP[4\\\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
     $eicar_tag = "eicar" nocase
   condition:
     $eicar or $eicar_tag
 }`
   },
+  // ────────────────────────────────────────────────────────────────────────
+  // RANSOMWARE
+  // ────────────────────────────────────────────────────────────────────────
   {
     name: 'wannacry_ransomware',
     label: 'WannaCry / WanaCrypt0r Ransomware',
@@ -36,6 +44,86 @@ export const EXAMPLE_YARA_RULES = [
 }`
   },
   {
+    name: 'lockbit3_ransomware',
+    label: 'LockBit 3.0 / BlackMatter Ransomware',
+    rule: `rule Ransomware_LockBit3 {
+  meta:
+    description = "Detects LockBit 3.0 Black ransom note artifacts and mutex patterns"
+    author = "ThreatAtlas YARA Core"
+    severity = "critical"
+  strings:
+    $lb1 = "lockbit" nocase
+    $lb2 = "LockBit Black" nocase
+    $lb3 = "LB3" nocase
+    $lb4 = "Restore-My-Files.txt" nocase
+    $lb5 = "blackmatter" nocase
+    $lb6 = ".lockbit" nocase
+    $lb7 = "LOCKBIT-README.txt" nocase
+  condition:
+    1 of them
+}`
+  },
+  {
+    name: 'blackcat_alphv',
+    label: 'BlackCat / ALPHV Ransomware (Rust)',
+    rule: `rule Ransomware_BlackCat_ALPHV {
+  meta:
+    description = "Detects BlackCat/ALPHV cross-platform ransomware written in Rust"
+    author = "ThreatAtlas YARA Core"
+    severity = "critical"
+  strings:
+    $bc1 = "alphv" nocase
+    $bc2 = "blackcat" nocase
+    $bc3 = "RECOVER-FILES.txt" nocase
+    $bc4 = "nodetam" nocase
+    $bc5 = "safeboot" nocase
+    $bc6 = ".sykffle" nocase
+  condition:
+    1 of them
+}`
+  },
+  {
+    name: 'ryuk_conti_ransomware',
+    label: 'Ryuk / Conti / TrickBot Ransomware Chain',
+    rule: `rule Ransomware_Ryuk_Conti {
+  meta:
+    description = "Detects Ryuk and Conti ransomware payloads delivered via TrickBot"
+    author = "ThreatAtlas YARA Core"
+    severity = "critical"
+  strings:
+    $r1 = "RyukReadMe.txt" nocase
+    $r2 = "CONTI_README.txt" nocase
+    $r3 = "ryuk" nocase
+    $r4 = "conti" nocase
+    $r5 = "No system is safe" nocase
+    $r6 = "Your network has been breached" nocase
+    $r7 = "UNIQUE_LOCK_KEY" nocase
+  condition:
+    1 of them
+}`
+  },
+  {
+    name: 'emotet_dropper',
+    label: 'Emotet / TrickBot Banking Trojan',
+    rule: `rule Trojan_Emotet_Trickbot {
+  meta:
+    description = "Detects Emotet and TrickBot modular banking trojan droppers"
+    author = "ThreatAtlas YARA Core"
+    severity = "critical"
+  strings:
+    $e1 = "emotet" nocase
+    $e2 = "trickbot" nocase
+    $e3 = "heodo" nocase
+    $e4 = "geodo" nocase
+    $e5 = "banker" nocase
+  condition:
+    1 of them
+}`
+  },
+  // ────────────────────────────────────────────────────────────────────────
+  // APT & NATION-STATE
+  // ────────────────────────────────────────────────────────────────────────
+  {
     name: 'cobalt_strike_beacon',
     label: 'Cobalt Strike Beacon & C2',
     rule: `rule CobaltStrike_Beacon {
@@ -49,25 +137,92 @@ export const EXAMPLE_YARA_RULES = [
     $cs3 = "%d is an x64 process" nocase
     $cs4 = "ReflectiveDll.x64.dll" nocase
     $cs5 = "cobalt" nocase
+    $cs6 = "MZ_ERROR_LOADING_DLL" nocase
   condition:
     1 of them
 }`
   },
   {
-    name: 'mimikatz_dump',
-    label: 'Mimikatz Credential Dumper',
-    rule: `rule Mimikatz_Generic {
+    name: 'apt29_cozycar',
+    label: 'APT29 CozyBear / SolarWinds SUNBURST',
+    rule: `rule APT29_CozyBear_Sunburst {
   meta:
-    description = "Detects Mimikatz credential dumping and LSASS injection artifacts"
+    description = "Detects APT29 CozyBear, SUNBURST implant, and MagicWeb backdoor artifacts"
+    author = "ThreatAtlas YARA Core"
+    severity = "critical"
+  strings:
+    $apt1 = "cozycar" nocase
+    $apt2 = "minidionis" nocase
+    $apt3 = "sunburst" nocase
+    $apt4 = "SolarWinds.Orion" nocase
+    $apt5 = "avsvmcloud.com" nocase
+    $apt6 = "magicweb" nocase
+    $apt7 = "cozyDuke" nocase
+  condition:
+    1 of them
+}`
+  },
+  {
+    name: 'lazarus_group',
+    label: 'Lazarus Group / DPRK APT Implants',
+    rule: `rule APT_Lazarus_DPRK {
+  meta:
+    description = "Detects North Korea Lazarus Group malware patterns and campaign strings"
+    author = "ThreatAtlas YARA Core"
+    severity = "critical"
+  strings:
+    $laz1 = "lazarus" nocase
+    $laz2 = "whiskeyalfa" nocase
+    $laz3 = "bluenoroff" nocase
+    $laz4 = "andariel" nocase
+    $laz5 = "hidden cobra" nocase
+    $laz6 = "applejeus" nocase
+    $laz7 = "operation dream job" nocase
+  condition:
+    1 of them
+}`
+  },
+  {
+    name: 'turla_snake_apt',
+    label: 'Turla / Snake / Uroburos (Russia APT)',
+    rule: `rule APT_Turla_Snake {
+  meta:
+    description = "Detects Russian Turla APT implants including Snake/Uroburos rootkit artifacts"
+    author = "ThreatAtlas YARA Core"
+    severity = "critical"
+  strings:
+    $t1 = "turla" nocase
+    $t2 = "uroburos" nocase
+    $t3 = "waterbug" nocase
+    $t4 = "venomous bear" nocase
+    $t5 = "gazer" nocase
+    $t6 = "kazuar" nocase
+    $t7 = "carbon" nocase
+  condition:
+    1 of them
+}`
+  },
+  // ────────────────────────────────────────────────────────────────────────
+  // RAT & BACKDOOR
+  // ────────────────────────────────────────────────────────────────────────
+  {
+    name: 'asyncrat_njrat',
+    label: 'AsyncRAT / NjRAT / QuasarRAT Remote Access Trojans',
+    rule: `rule RAT_AsyncNjQuasar {
+  meta:
+    description = "Detects AsyncRAT, NjRAT, and QuasarRAT C2 beacon and config artifacts"
     author = "ThreatAtlas YARA Core"
     severity = "high"
   strings:
-    $m1 = "mimikatz" nocase
-    $m2 = "sekurlsa::" nocase
-    $m3 = "lsadump::" nocase
-    $m4 = "privilege::debug" nocase
-    $m5 = "Pass-the-Hash" nocase
-    $m6 = "crypto::hash" nocase
+    $r1 = "asyncrat" nocase
+    $r2 = "njrat" nocase
+    $r3 = "quasarrat" nocase
+    $r4 = "quasar" nocase
+    $r5 = "asyncclient" nocase
+    $r6 = "Stub.exe" nocase
+    $r7 = "limeRAT" nocase
+    $r8 = "DcRat" nocase
+    $r9 = "Orcus" nocase
   condition:
     1 of them
 }`
@@ -92,38 +247,57 @@ export const EXAMPLE_YARA_RULES = [
 }`
   },
   {
-    name: 'xmrig_coinminer',
-    label: 'XMRig / Monero CPU Cryptominer',
-    rule: `rule Cryptominer_XMRig {
+    name: 'log4shell_exploit',
+    label: 'Log4Shell (CVE-2021-44228) JNDI Injection',
+    rule: `rule Exploit_Log4Shell_JNDI {
   meta:
-    description = "Detects unauthorized XMRig / Stratum protocol coinminers"
+    description = "Detects Log4Shell JNDI injection exploitation attempts"
     author = "ThreatAtlas YARA Core"
-    severity = "high"
+    severity = "critical"
   strings:
-    $x1 = "xmrig" nocase
-    $x2 = "stratum+tcp://" nocase
-    $x3 = "stratum+ssl://" nocase
-    $x4 = "cryptonight" nocase
-    $x5 = "monero" nocase
-    $x6 = "coinminer" nocase
+    $j1 = "\${jndi:" nocase
+    $j2 = "jndi:ldap://" nocase
+    $j3 = "jndi:rmi://" nocase
+    $j4 = "jndi:dns://" nocase
+    $j5 = "log4shell" nocase
+    $j6 = "CVE-2021-44228" nocase
   condition:
     1 of them
 }`
   },
   {
-    name: 'emotet_dropper',
-    label: 'Emotet / TrickBot Banking Trojan',
-    rule: `rule Trojan_Emotet_Trickbot {
+    name: 'proxylogon_exchange',
+    label: 'ProxyLogon / ProxyShell Exchange Server RCE',
+    rule: `rule Exploit_ProxyLogon_Exchange {
   meta:
-    description = "Detects Emotet and TrickBot modular banking trojan droppers"
+    description = "Detects ProxyLogon and ProxyShell Exchange Server webshell artifacts"
     author = "ThreatAtlas YARA Core"
     severity = "critical"
   strings:
-    $e1 = "emotet" nocase
-    $e2 = "trickbot" nocase
-    $e3 = "heodo" nocase
-    $e4 = "geodo" nocase
-    $e5 = "banker" nocase
+    $px1 = "proxylogon" nocase
+    $px2 = "proxyshell" nocase
+    $px3 = "CVE-2021-26855" nocase
+    $px4 = "CVE-2021-34473" nocase
+    $px5 = "X-BEResource" nocase
+  condition:
+    1 of them
+}`
+  },
+  {
+    name: 'mimikatz_dump',
+    label: 'Mimikatz Credential Dumper',
+    rule: `rule Mimikatz_Generic {
+  meta:
+    description = "Detects Mimikatz credential dumping and LSASS injection artifacts"
+    author = "ThreatAtlas YARA Core"
+    severity = "high"
+  strings:
+    $m1 = "mimikatz" nocase
+    $m2 = "sekurlsa::" nocase
+    $m3 = "lsadump::" nocase
+    $m4 = "privilege::debug" nocase
+    $m5 = "Pass-the-Hash" nocase
+    $m6 = "Invoke-Mimikatz" nocase
   condition:
     1 of them
 }`
@@ -145,6 +319,7 @@ export const EXAMPLE_YARA_RULES = [
     $p6 = "@eval(" nocase
     $p7 = "c99shell" nocase
     $p8 = "r57shell" nocase
+    $p9 = "FilesMan" nocase
   condition:
     1 of them
 }`
@@ -166,28 +341,31 @@ export const EXAMPLE_YARA_RULES = [
     $ps6 = "iex(" nocase
     $ps7 = "invoke-expression" nocase
     $ps8 = "-windowstyle hidden" nocase
+    $ps9 = "Invoke-Mimikatz" nocase
   condition:
-    $ps1 and (1 of ($ps2, $ps3, $ps4, $ps5, $ps6, $ps7, $ps8))
+    $ps1 and (1 of ($ps2, $ps3, $ps4, $ps5, $ps6, $ps7, $ps8, $ps9))
 }`
   },
   {
     name: 'macro_malware',
-    label: 'Office VBA Malicious Macro',
+    label: 'Office VBA Malicious Macro & Dropper',
     rule: `rule OfficeMacro_Malware {
   meta:
-    description = "Detects malicious VBA Office macros and execution routines"
+    description = "Detects malicious VBA Office macros and dropper execution routines"
     author = "ThreatAtlas YARA Core"
     severity = "medium"
   strings:
     $macro1 = "AutoOpen" nocase
     $macro2 = "Document_Open" nocase
     $macro3 = "Auto_Open" nocase
-    $macro4 = "Shell(" nocase
-    $macro5 = "WScript.Shell" nocase
-    $macro6 = "CreateObject" nocase
-    $macro7 = "vba" nocase
+    $macro4 = "Workbook_Open" nocase
+    $macro5 = "Shell(" nocase
+    $macro6 = "WScript.Shell" nocase
+    $macro7 = "CreateObject" nocase
+    $macro8 = "cmd.exe /c" nocase
+    $macro9 = "powershell -e" nocase
   condition:
-    1 of ($macro1, $macro2, $macro3) or (2 of ($macro4, $macro5, $macro6, $macro7))
+    1 of ($macro1, $macro2, $macro3, $macro4) or (2 of ($macro5, $macro6, $macro7, $macro8, $macro9))
 }`
   },
   {
@@ -205,6 +383,7 @@ export const EXAMPLE_YARA_RULES = [
     $api4 = "QueueUserAPC" nocase
     $api5 = "SetThreadContext" nocase
     $api6 = "NtUnmapViewOfSection" nocase
+    $api7 = "RtlCreateUserThread" nocase
   condition:
     2 of them
 }`
@@ -214,15 +393,17 @@ export const EXAMPLE_YARA_RULES = [
     label: 'Anti-Analysis & Sandbox Evasion',
     rule: `rule Anti_Analysis_Sandbox_Evasion {
   meta:
-    description = "Detects debugger detection, sandbox checks, and sleep acceleration"
+    description = "Detects debugger detection, VM checks, sandbox evasion"
     author = "ThreatAtlas YARA Core"
     severity = "medium"
   strings:
     $aa1 = "IsDebuggerPresent" nocase
     $aa2 = "CheckRemoteDebuggerPresent" nocase
     $aa3 = "NtQueryInformationProcess" nocase
-    $aa4 = "OutputDebugString" nocase
-    $aa5 = "GetTickCount" nocase
+    $aa4 = "GetTickCount" nocase
+    $aa5 = "VirtualBox" nocase
+    $aa6 = "VMware" nocase
+    $aa7 = "SbieDll.dll" nocase
   condition:
     2 of them
 }`
@@ -232,7 +413,7 @@ export const EXAMPLE_YARA_RULES = [
     label: 'UPX / High-Entropy Packed Binary',
     rule: `rule Packed_UPX_Section {
   meta:
-    description = "Detects UPX and ASPack packed binary sections"
+    description = "Detects UPX and ASPack packed binary sections including PE hex magic bytes"
     author = "ThreatAtlas YARA Core"
     severity = "medium"
   strings:
@@ -277,12 +458,70 @@ export const EXAMPLE_YARA_RULES = [
     $rs2 = "/bin/sh -i" nocase
     $rs3 = "/bin/bash -i" nocase
     $rs4 = "nc -e /bin" nocase
-    $rs5 = "0>&1 2>&1" nocase
-    $rs6 = "reverse_tcp" nocase
+    $rs5 = "reverse_tcp" nocase
+    $rs6 = "bash -i >& /dev/tcp" nocase
   condition:
     1 of them
 }`
-  }
+  },
+  {
+    name: 'xmrig_coinminer',
+    label: 'XMRig / Monero CPU Cryptominer',
+    rule: `rule Cryptominer_XMRig {
+  meta:
+    description = "Detects unauthorized XMRig / Stratum protocol coinminers"
+    author = "ThreatAtlas YARA Core"
+    severity = "high"
+  strings:
+    $x1 = "xmrig" nocase
+    $x2 = "stratum+tcp://" nocase
+    $x3 = "stratum+ssl://" nocase
+    $x4 = "cryptonight" nocase
+    $x5 = "monero" nocase
+    $x6 = "pool.hashvault.pro" nocase
+  condition:
+    1 of them
+}`
+  },
+  {
+    name: 'dga_c2_beacon',
+    label: 'DGA Domain Generation / C2 Beacon Patterns',
+    rule: `rule DGA_C2_Beacon {
+  meta:
+    description = "Detects Domain Generation Algorithm and C2 beaconing infrastructure strings"
+    author = "ThreatAtlas YARA Core"
+    severity = "high"
+  strings:
+    $dga1 = "generateDomain" nocase
+    $dga2 = "beacon_interval" nocase
+    $dga3 = "heartbeat_url" nocase
+    $dga4 = "c2_server" nocase
+    $dga5 = "callback_url" nocase
+    $dga6 = "sleep_time" nocase
+  condition:
+    2 of them
+}`
+  },
+  {
+    name: 'linux_persistence',
+    label: 'Linux Persistence & LD_PRELOAD Hijacking',
+    rule: `rule Linux_Persistence_Techniques {
+  meta:
+    description = "Detects Linux persistence via cron injection, LD_PRELOAD, and rootkit installation"
+    author = "ThreatAtlas YARA Core"
+    severity = "high"
+  strings:
+    $lp1 = "LD_PRELOAD" nocase
+    $lp2 = "/etc/cron.d" nocase
+    $lp3 = "crontab -l" nocase
+    $lp4 = "/etc/rc.local" nocase
+    $lp5 = "systemctl enable" nocase
+    $lp6 = "chattr +i" nocase
+    $lp7 = ".bashrc" nocase
+  condition:
+    2 of them
+}`
+  },
 ];
 
 interface StringDef {
