@@ -1,6 +1,7 @@
 MIT License
 
-Copyright (c) 2026 ThreatAtlas (threatatlas.luckyverse.tech)
+Copyright (c) 2026 lucky-om (https://github.com/lucky-om)
+ThreatAtlas — https://threatatlas.luckyverse.tech
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -20,17 +21,92 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
----
-
+───────────────────────────────────────────────────────────────────────────────
 THIRD-PARTY ATTRIBUTIONS
+───────────────────────────────────────────────────────────────────────────────
 
-This software uses the VirusTotal Public API (https://www.virustotal.com).
-VirusTotal is a service of Google LLC. Use of the VirusTotal API is subject to
-VirusTotal's Terms of Service and Privacy Policy:
-  - Terms: https://support.virustotal.com/hc/en-us/articles/115002145529-Terms-of-Service
-  - Privacy: https://support.virustotal.com/hc/en-us/articles/115002168385-Privacy-Policy
+This software integrates with or bundles the following third-party services
+and open-source packages. Each is governed by its own license terms.
 
-Typography provided by Google Fonts under the Open Font License (OFL):
-  - Space Grotesk: Copyright 2020 Florian Karsten
-  - IBM Plex Sans: Copyright IBM Corp. 2017
-  - JetBrains Mono: Copyright 2020 JetBrains s.r.o.
+VIRUSTOTAL API
+  VirusTotal Public API v3 — https://www.virustotal.com
+  A service of Google LLC. Use is subject to VirusTotal's Terms of Service
+  and Privacy Policy:
+    Terms:   https://support.virustotal.com/hc/en-us/articles/115002145529
+    Privacy: https://support.virustotal.com/hc/en-us/articles/115002168385
+
+GROQ API
+  Groq Cloud API — https://groq.com
+  Used to power the Atlas AI assistant (LLaMA-3.3-70B inference).
+  Subject to Groq's Terms of Service: https://groq.com/terms-of-service/
+
+OPENPHISH
+  OpenPhish Community Feed — https://openphish.com
+  Real-time phishing intelligence feed used by the PhishGuard engine.
+  Subject to OpenPhish's usage policy.
+
+REACT
+  Copyright (c) Meta Platforms, Inc. and affiliates.
+  Licensed under the MIT License.
+  https://github.com/facebook/react/blob/main/LICENSE
+
+FRAMER MOTION
+  Copyright (c) 2018 Framer BV.
+  Licensed under the MIT License.
+  https://github.com/framer/motion/blob/main/LICENSE.md
+
+LUCIDE REACT
+  Copyright (c) 2020 Lucide Contributors.
+  Licensed under the ISC License.
+  https://github.com/lucide-icons/lucide/blob/main/LICENSE
+
+VITE
+  Copyright (c) 2019-present, Evan You and Vite contributors.
+  Licensed under the MIT License.
+  https://github.com/vitejs/vite/blob/main/LICENSE
+
+EXPRESS
+  Copyright (c) 2009-2014 TJ Holowaychuk, 2013-2014 Roman Shtylman,
+  2014-2015 Douglas Christopher Wilson.
+  Licensed under the MIT License.
+  https://github.com/expressjs/express/blob/master/LICENSE
+
+JSPDF
+  Copyright (c) 2010 James Hall, https://github.com/MrRio/jsPDF
+  Licensed under the MIT License.
+  https://github.com/parallax/jsPDF/blob/master/LICENSE
+
+EXIFR
+  Copyright (c) 2019 Mike Kovařík, Mutiny.cz
+  Licensed under the MIT License.
+  https://github.com/MikeKovarik/exifr/blob/master/LICENSE
+
+PDF-PARSE
+  Licensed under the MIT License.
+  https://gitlab.com/autokent/pdf-parse
+
+FLUENT-FFMPEG
+  Copyright (c) 2011 Stefan Schaermeli
+  Licensed under the MIT License.
+  https://github.com/fluent-ffmpeg/node-fluent-ffmpeg/blob/master/LICENSE
+
+WHOIS-JSON
+  Licensed under the MIT License.
+  https://github.com/nicktacular/node-whois
+
+REACT ROUTER
+  Copyright (c) React Training LLC 2015-2019, Remix Software Inc 2020-2023.
+  Licensed under the MIT License.
+  https://github.com/remix-run/react-router/blob/main/LICENSE.md
+
+REACT HELMET ASYNC
+  Copyright (c) 2018 Scott Taylor.
+  Licensed under the Apache License 2.0.
+  https://github.com/staylor/react-helmet-async/blob/main/LICENSE
+
+TYPOGRAPHY — Google Fonts (Open Font License)
+  Inter         — Copyright 2020 The Inter Project Authors
+  Outfit        — Copyright 2021 The Outfit Project Authors
+  JetBrains Mono — Copyright 2020 JetBrains s.r.o.
+  All fonts licensed under SIL Open Font License 1.1:
+  https://scripts.sil.org/OFL

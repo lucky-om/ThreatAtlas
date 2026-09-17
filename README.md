@@ -1,217 +1,320 @@
-# ThreatAtlas
+<div align="center">
 
-> **Free Threat Intelligence Platform — threatatlas.luckyverse.tech**
+<img src="frontend/public/images/logo.png" alt="ThreatAtlas Logo" width="120" />
+
+# ThreatAtlas v2.0
+
+**Free & Open-Source Cyber Threat Intelligence Platform**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-orange.svg)](./LICENSE)
 [![Powered by VirusTotal](https://img.shields.io/badge/Powered%20by-VirusTotal-blue.svg)](https://www.virustotal.com)
 [![Status](https://img.shields.io/badge/Status-Active-brightgreen.svg)](https://threatatlas.luckyverse.tech)
+[![Frontend](https://img.shields.io/badge/Frontend-Vercel-black.svg)](https://vercel.com)
+[![Backend](https://img.shields.io/badge/Backend-Render-46E3B7.svg)](https://render.com)
 
-ThreatAtlas is a cybersecurity threat intelligence platform that lets you analyze files, URLs, IP addresses, domains, and cryptographic hashes against **90+ security engines** — instantly and for free. Built as a purpose-designed interface over the VirusTotal Public API v3.
+**[🌐 Live Demo → threatatlas.luckyverse.tech](https://threatatlas.luckyverse.tech)**
+
+</div>
 
 ---
 
-## Features
+ThreatAtlas is a full-stack cybersecurity threat intelligence platform that lets you analyze files, URLs, IP addresses, domains, and hashes against **90+ security engines** — instantly and for free. Built on React + TypeScript (frontend) and Node.js/Express (backend), powered by the VirusTotal Public API v3.
 
-- **File Analysis** — Upload any file up to 32MB for multi-engine antivirus scanning
-- **URL Scanner** — Check URLs for phishing, malware, and malicious redirects
-- **IP Intelligence** — Geolocation, ASN data, and 90+ engine verdicts for any IP
-- **Domain Lookup** — Registrar info, reputation scores, and historical scan data
-- **Hash Lookup** — Instant results for SHA256, SHA1, and MD5 hashes — no re-upload needed
-- **Real-time Polling** — Automatically polls for analysis completion with progress feedback
-- **Threat Score Gauge** — Visual SVG gauge showing threat severity (0–100)
-- **Engine Breakdown** — Per-vendor detection results with filtering (detected/clean/timeout)
-- **Rate Limit Awareness** — Built-in client-side rate limiting and retry handling
-- **Responsive Design** — Works on desktop, tablet, and mobile
-- **No Registration Required** — Start scanning immediately, no account needed
+---
 
-## Pages
+## ✨ Features
 
-| Page | URL | Description |
-|------|-----|-------------|
-| Home / Scanner | `/` | Main scanner with file upload, URL/IP/domain/hash input |
-| Scan Results | `/results.html` | Detailed analysis report for a file or URL |
-| IP & Domain Lookup | `/lookup.html` | Intelligence lookup for IPs and domains |
-| About | `/about.html` | Platform info, API details, mission |
-| Privacy Policy | `/privacy.html` | Data handling and GDPR information |
-| Terms & Conditions | `/terms.html` | Usage terms and legal disclaimers |
-| Rules & Regulations | `/rules.html` | API rules, rate limits, acceptable use policy |
-| 404 | `/404.html` | Custom error page with built-in quick-scan |
-| Sitemap | `/sitemap.xml` | XML sitemap for search engines |
-| Robots | `/robots.txt` | Crawler rules |
+### 🔍 Core Scanners
+| Scanner | Description |
+|---------|-------------|
+| **File Scanner** | Upload any file up to 32 MB for multi-engine AV analysis |
+| **URL Scanner** | Detect phishing, malware, and malicious redirects |
+| **IP Intelligence** | Geolocation, ASN, WHOIS, and 90+ engine verdicts |
+| **Domain Lookup** | Registrar info, DNS records, reputation scores |
+| **Hash Lookup** | Instant results for SHA-256, SHA-1, MD5 |
+| **Bulk IOC Hunter** | Scan multiple indicators of compromise at once |
 
-## Project Structure
+### 🕵️ WebFox — Website Recon Engine
+- DNS Records (A, AAAA, MX, TXT, NS, SOA)
+- WHOIS & domain age analysis
+- SSL/TLS certificate inspection
+- WAF detection (23 vendors including Cloudflare, Akamai, AWS)
+- Security headers grading (CSP, HSTS, X-Frame-Options, etc.)
+- Tech stack fingerprinting
+- Subdomain enumeration (crt.sh + HackerTarget + AlienVault OTX)
+- Sitemap & robots.txt crawler
+- JavaScript secret scanner (API keys, tokens, JWT)
+
+### 🎣 PhishGuard — Phishing Detection Engine
+- Homograph / IDN attack detection
+- Brand impersonation detection (50+ brands)
+- Entropy-based URL analysis
+- Typosquatting detection via Levenshtein distance
+- OpenPhish live blacklist integration
+- Suspicious TLD & pattern analysis
+- URL redirect chain unwinding
+- Punycode decoding
+
+### 🔬 Forensics Suite
+| Module | Capability |
+|--------|-----------|
+| **Image Forensics** | EXIF metadata, GPS coordinates, steganography (LSB) |
+| **PDF Forensics** | Embedded JS detection, OpenAction, launch actions, macros |
+| **PE Executable** | Section analysis, imports, entropy, rich header |
+| **ELF Executable** | Section headers, dynamic symbols, libraries |
+| **APK Forensics** | Manifest, permissions, certificates, string analysis |
+| **Archive Forensics** | ZIP/RAR/7z inspection, file listing |
+| **Email Forensics** | Header analysis, SPF/DKIM/DMARC, routing path |
+| **PCAP Forensics** | Network capture inspection |
+| **Video/Audio** | FFprobe metadata extraction |
+| **Document** | Office document analysis |
+
+### 🧠 AI & Intelligence
+- **Atlas AI Chatbot** — Contextual cybersecurity assistant (Groq LLaMA-3.3-70B)
+- **AI Summary** — Automatic threat verdict generation grounded in scan facts
+- **Threat Graph** — Force-directed visualization of threat relationships
+- **YARA Scanner** — Rule-based pattern matching
+- **CyberChef** — Embedded encoding/decoding toolkit
+
+### 📊 Platform
+- Persistent scan history with JSON/CSV export
+- One-click PDF report generation
+- Community comments from VirusTotal
+- Real-time polling with progress feedback
+- Animated threat score gauge (0–100)
+- Per-engine breakdown with filtering
+
+---
+
+## 🏗️ Architecture
 
 ```
-threatatlas/
-├── index.html          # Home page + scanner
-├── results.html        # Scan results page
-├── lookup.html         # IP & domain lookup
-├── about.html          # About page
-├── privacy.html        # Privacy policy
-├── terms.html          # Terms & conditions
-├── rules.html          # API rules & regulations
-├── 404.html            # Custom 404 error page
-├── sitemap.xml         # XML sitemap
-├── robots.txt          # Crawler rules
-├── LICENSE             # MIT License
-├── SECURITY.md         # Security policy & vulnerability disclosure
-├── README.md           # This file
-└── assets/
-    ├── css/
-    │   └── main.css    # Global design system & all component styles
-    └── js/
-        ├── api.js      # VirusTotal API v3 client with rate limiting
-        ├── ui.js       # UI component library (gauges, toasts, tables)
-        └── main.js     # Home page controller
+ThreatAtlas/
+├── frontend/                   # React + TypeScript + Vite
+│   ├── src/
+│   │   ├── components/         # 40+ UI components
+│   │   ├── pages/              # 16 route pages
+│   │   ├── services/           # API, cache, history, forensics engines
+│   │   ├── utils/              # PDF export, input sanitization
+│   │   └── workers/            # Steganography web worker
+│   ├── public/                 # Static assets, favicon, robots.txt
+│   ├── vercel.json             # SPA routing for Vercel
+│   └── .env.example            # Required env vars
+│
+└── backend/                    # Node.js + Express + TypeScript
+    ├── src/
+    │   └── server.ts           # All API routes + keepalive ping
+    └── .env.example            # Required env vars
 ```
 
-## Technology Stack
+## 🛠️ Tech Stack
 
-- **Frontend:** Vanilla HTML5, CSS3, JavaScript (ES6+)
-- **Styling:** Custom CSS with design tokens — no frameworks
-- **API:** [VirusTotal Public API v3](https://docs.virustotal.com/reference/overview)
-- **Fonts:** Space Grotesk, IBM Plex Sans, JetBrains Mono (Google Fonts)
-- **Hosting:** Static subdomain — `threatatlas.luckyverse.tech`
+| Layer | Technology |
+|-------|-----------|
+| **Frontend Framework** | React 18 + TypeScript |
+| **Build Tool** | Vite 5 |
+| **Animations** | Framer Motion |
+| **Icons** | Lucide React |
+| **PDF Export** | jsPDF |
+| **EXIF Parsing** | exifr |
+| **Backend** | Node.js + Express 5 |
+| **Media Analysis** | fluent-ffmpeg |
+| **PDF Analysis** | pdf-parse |
+| **WHOIS** | whois-json |
+| **AI Chatbot** | Groq API (LLaMA-3.3-70B) |
+| **Threat Intel** | VirusTotal Public API v3 |
+| **Phishing Intel** | OpenPhish feed |
 
-## Design System
+---
 
-ThreatAtlas uses a custom "threat intelligence operator" aesthetic:
+## 🚀 Getting Started
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| Background | `#080d16` | Page background (deep space) |
-| Surface | `#0f1925` | Cards and panels |
-| Primary (Ember) | `#e8541a` | Brand, CTAs, danger indicators |
-| Secondary (Teal) | `#00bfa0` | Clean/safe verdicts |
-| Warning | `#f59e0b` | Suspicious indicators |
-| Headline Font | Space Grotesk | H1–H4 |
-| Body Font | IBM Plex Sans | Paragraphs and labels |
-| Mono Font | JetBrains Mono | Hashes, IPs, code |
+### Prerequisites
+- Node.js 18+
+- npm 9+
+- A [VirusTotal API key](https://www.virustotal.com/gui/my-apikey) (free)
+- A [Groq API key](https://console.groq.com/keys) (free, optional — for AI features)
 
-## API Configuration
-
-ThreatAtlas uses the VirusTotal Public API. The API key is configured in `assets/js/api.js`.
-
-**Public API Limits:**
-- 4 requests per minute
-- 500 requests per day
-- 32 MB max file size
-
-> **Security Note:** Do not commit API keys to public repositories. If deploying your own instance, move the API key to a server-side proxy or environment variable. See `SECURITY.md` for details.
-
-## Getting Started (Local Development)
-
-ThreatAtlas is a fully static site — no build tools or package managers required.
+### Clone & Install
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/threatatlas.git
-cd threatatlas
+git clone https://github.com/lucky-om/ThreatAtlas.git
+cd ThreatAtlas
 
-# Serve locally with any HTTP server
-# Option 1: Python
-python -m http.server 8080
-
-# Option 2: Node.js
-npx serve .
-
-# Option 3: VS Code Live Server extension
-# Open index.html and click "Go Live"
+# Install all dependencies (root + frontend + backend)
+npm run install:all
 ```
 
-Open `http://localhost:8080` in your browser.
+### Configure Environment
 
-> **Note:** The VirusTotal API requires HTTPS in production. For local testing, the browser may block API calls due to mixed content policies. Use a local HTTPS server or browser extension if needed.
-
-## Deployment
-
-ThreatAtlas is designed for static hosting. Deploy to any web host:
-
-- **Subdomain (recommended):** Upload all files to your subdomain's document root
-- **GitHub Pages:** Push to a `gh-pages` branch and configure custom domain
-- **Netlify / Vercel:** Drag and drop the directory or connect your repository
-- **Apache / Nginx:** Copy files to your web root directory
-
-### Nginx Configuration (recommended)
-
-```nginx
-server {
-    listen 443 ssl http2;
-    server_name threatatlas.luckyverse.tech;
-
-    root /var/www/threatatlas;
-    index index.html;
-
-    # Security headers
-    add_header X-Frame-Options "DENY" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-
-    # Custom 404
-    error_page 404 /404.html;
-
-    # Cache static assets
-    location ~* \.(css|js|ico|woff2)$ {
-        expires 7d;
-        add_header Cache-Control "public, immutable";
-    }
-
-    location / {
-        try_files $uri $uri.html $uri/ =404;
-    }
-}
+**Frontend** — create `frontend/.env.local`:
+```env
+VITE_VT_API_KEY=your_virustotal_api_key
+VITE_API_BASE_URL=http://localhost:3001
+VITE_GROQ_API_KEY=your_groq_api_key   # optional
 ```
 
-## Security
+**Backend** — create `backend/.env`:
+```env
+PORT=3001
+ALLOWED_ORIGINS=http://localhost:3002
+```
 
-See [SECURITY.md](./SECURITY.md) for our security policy, including how to report vulnerabilities.
+### Run Locally
 
-Key security practices implemented:
-- Content-Security-Policy headers on every page
-- `X-Content-Type-Options: nosniff` on every page
-- `Referrer-Policy: strict-origin-when-cross-origin`
-- `Permissions-Policy` restricting camera, microphone, geolocation
-- No third-party tracking scripts
-- sessionStorage only (no persistent cookies)
-- Input sanitization via `escHtml()` in all UI rendering
+```bash
+# Run both frontend + backend simultaneously
+npm run dev
 
-## Roadmap
+# Frontend only (port 3002)
+npm run dev:frontend
 
-Future features planned for ThreatAtlas:
+# Backend only (port 3001)
+npm run dev:backend
+```
 
-- [ ] AI-powered threat summarization (natural language descriptions of malware behavior)
-- [ ] Threat graph visualization (related IPs, domains, files)
-- [ ] Bulk hash checker (upload a list of hashes)
-- [ ] Notification system for re-scan alerts
-- [ ] Dark/light theme toggle
-- [ ] WHOIS deep dive page
-- [ ] Export reports as PDF
-- [ ] Community voting on verdicts
+Open **http://localhost:3002** in your browser.
 
-## Contributing
+---
 
-Contributions are welcome! Please read `SECURITY.md` before submitting any security-related changes.
+## 🌍 Deployment
+
+ThreatAtlas is designed as a **Frontend → Vercel + Backend → Render** deployment.
+
+### Backend (Render)
+
+1. New Web Service → connect repo
+2. **Root Directory:** `backend`
+3. **Build:** `npm install && npm run build`
+4. **Start:** `npm start`
+5. Add Environment Variables:
+
+| Key | Value |
+|-----|-------|
+| `ALLOWED_ORIGINS` | `https://threatatlas.luckyverse.tech,https://your-app.vercel.app` |
+
+### Frontend (Vercel)
+
+1. New Project → connect repo
+2. **Root Directory:** `frontend`
+3. **Framework:** Vite
+4. Add Environment Variables:
+
+| Key | Value |
+|-----|-------|
+| `VITE_VT_API_KEY` | Your VirusTotal API key |
+| `VITE_API_BASE_URL` | `https://your-backend.onrender.com` |
+| `VITE_GROQ_API_KEY` | Your Groq API key |
+
+### Custom Domain
+
+Add a CNAME record in your DNS:
+```
+threatatlas  CNAME  cname.vercel-dns.com
+```
+
+### Keeping Render Alive (Free Tier)
+
+The backend includes a **built-in self-ping** every 14 minutes (`process.env.RENDER` auto-activates it). Additionally, set up **UptimeRobot** for external monitoring:
+
+- URL: `https://your-backend.onrender.com/api/ping`
+- Interval: every 5 minutes
+- Free at [uptimerobot.com](https://uptimerobot.com)
+
+---
+
+## 🔐 Security
+
+See [SECURITY.md](./SECURITY.md) for the full vulnerability disclosure policy.
+
+**Key practices:**
+- All API keys stored in environment variables — never hardcoded
+- CORS restricted to allowed origins via `ALLOWED_ORIGINS` env var
+- Input sanitization via `sanitizeInput()` / `sanitizeUrl()` before all API calls
+- HTML output escaping throughout rendering pipeline
+- `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options` headers
+- No persistent cookies — scan history stored in `localStorage` only
+- Uploaded files auto-deleted from server after processing
+
+---
+
+## 📄 Pages & Routes
+
+| Route | Page |
+|-------|------|
+| `/` | Home — main scanner hub |
+| `/file` | File Scanner |
+| `/url` | URL Scanner |
+| `/search` | Hash / Domain / IP Search |
+| `/webscan` | WebFox Website Recon |
+| `/ip-intelligence` | IP Geolocation & Intel |
+| `/threat-graph` | Threat Relationship Graph |
+| `/ioc-hunter` | Bulk IOC Scanner |
+| `/yara` | YARA Rule Scanner |
+| `/file/:hash` | File Analysis Results |
+| `/url/:id` | URL Analysis Results |
+| `/domain/:query` | Domain Analysis Results |
+| `/ip-address/:query` | IP Analysis Results |
+| `/about` | About ThreatAtlas |
+| `/privacy` | Privacy Policy |
+| `/terms` | Terms & Conditions |
+| `/rules` | API Rules & Fair Use |
+| `/contact` | Contact |
+
+---
+
+## 🗺️ Roadmap
+
+- [x] VirusTotal multi-engine scanning (file, URL, IP, domain, hash)
+- [x] WebFox website recon engine
+- [x] PhishGuard phishing detection
+- [x] Full forensics suite (image, PDF, PE, ELF, APK, email, media)
+- [x] Atlas AI chatbot & AI-powered summaries
+- [x] Threat graph visualization
+- [x] YARA rule scanner
+- [x] Bulk IOC hunter
+- [x] PDF report export
+- [x] Persistent scan history
+- [ ] VirusTotal Enterprise API support
+- [ ] MITRE ATT&CK technique mapping
+- [ ] Malware family clustering
+- [ ] Threat hunting notebooks
+- [ ] API endpoint for programmatic access
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome!
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes (`git commit -m 'Add: your feature description'`)
-4. Push to the branch (`git push origin feature/your-feature`)
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Commit your changes: `git commit -m 'feat: your feature description'`
+4. Push: `git push origin feature/your-feature`
 5. Open a Pull Request
 
-## License
+Please read [SECURITY.md](./SECURITY.md) before submitting security-related changes.
+
+---
+
+## 📜 License
 
 This project is licensed under the MIT License — see the [LICENSE](./LICENSE) file for details.
 
-## Acknowledgements
+---
 
-- [VirusTotal](https://www.virustotal.com) — Multi-engine scanning infrastructure and API
-- [Google Fonts](https://fonts.google.com) — Space Grotesk, IBM Plex Sans, JetBrains Mono
+## 🙏 Acknowledgements
+
+- [VirusTotal](https://www.virustotal.com) — Multi-engine threat intelligence infrastructure
+- [Groq](https://groq.com) — Ultra-fast LLM inference for Atlas AI
+- [OpenPhish](https://openphish.com) — Community phishing intelligence feed
+- [Lucide](https://lucide.dev) — Beautiful open-source icon library
+- [Framer Motion](https://www.framer.com/motion/) — Fluid React animations
 - Security community worldwide — for making threat intelligence a public good
 
 ---
 
 <p align="center">
-  Built with ❤️ for defenders everywhere · <a href="https://threatatlas.luckyverse.tech">threatatlas.luckyverse.tech</a>
+  Built with ❤️ for defenders everywhere &nbsp;·&nbsp;
+  <a href="https://threatatlas.luckyverse.tech">threatatlas.luckyverse.tech</a>
 </p>
