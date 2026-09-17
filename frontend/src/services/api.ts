@@ -563,7 +563,25 @@ export async function scanFile(file: File): Promise<{ data: { id: string }, bypa
 
   const form = new FormData();
   form.append('file', file, file.name);
-  return vtFetch<{ data: { id: string } }>('/files', { method: 'POST', body: form });
+
+  // Send to backend proxy to bypass VT CORS restrictions for POST /files
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+  const apiKey = import.meta.env.VITE_VT_API_KEY || '';
+
+  const res = await fetch(`${baseUrl}/vt/files`, { 
+    method: 'POST', 
+    body: form,
+    headers: {
+      'x-apikey': apiKey
+    }
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new ApiError(errorData.error || errorData.message || 'File upload failed', res.status);
+  }
+
+  return res.json();
 }
 
 // Poll analysis progress with fast responsive intervals

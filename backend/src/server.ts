@@ -121,6 +121,44 @@ app.get('/api/ipgeo', async (req, res) => {
   }
 });
 
+// Proxy for VirusTotal file uploads to avoid CORS issues in the browser
+app.post('/api/vt/files', upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const apiKey = req.headers['x-apikey'];
+  
+  if (!apiKey || typeof apiKey !== 'string') {
+    fs.unlinkSync(req.file.path);
+    return res.status(401).json({ error: 'API key required in x-apikey header' });
+  }
+
+  try {
+    const buffer = fs.readFileSync(req.file.path);
+    const blob = new Blob([buffer], { type: req.file.mimetype });
+    const formData = new FormData();
+    formData.append('file', blob, req.file.originalname || 'upload.bin');
+
+    const response = await fetch('https://www.virustotal.com/api/v3/files', {
+      method: 'POST',
+      headers: {
+        'x-apikey': apiKey
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+    fs.unlinkSync(req.file.path);
+    
+    if (!response.ok) {
+      return res.status(response.status).json(data);
+    }
+    res.json(data);
+  } catch (error: any) {
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    res.status(500).json({ error: 'VT proxy failed', details: error.message });
+  }
+});
+
+
 
 
 // --- FORENSICS ENGINE ---
