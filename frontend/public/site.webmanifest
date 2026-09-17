@@ -1,0 +1,23 @@
+{
+  "name": "ThreatAtlas",
+  "short_name": "ThreatAtlas",
+  "description": "Advanced threat intelligence platform — files, URLs, IPs, domains. Coded by Lucky.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050709",
+  "theme_color": "#050709",
+  "icons": [
+    {
+      "src": "/images/logo-round.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

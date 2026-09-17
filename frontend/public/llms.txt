@@ -1,0 +1,14 @@
+# ThreatAtlas
+
+ThreatAtlas is a next-generation cybersecurity platform that provides real-time threat intelligence by analyzing files, URLs, domains, and IP addresses.
+It integrates with 70+ antivirus engines, YARA rules, PhishGuard, and WebFox to deliver comprehensive security insights.
+
+## Core Capabilities
+- **File & Hash Scanning:** Fast and deep file analysis against 70+ engines.
+- **Bulk IOC Hunting:** Concurrently scan hundreds of IOCs across VirusTotal, URLhaus, and MalwareBazaar.
+- **Threat Graph:** Interactive 3D visualization of relationships between infrastructure (IPs, domains) and MITRE ATT&CK techniques.
+- **YARA Rules Engine:** Write and test custom YARA rules against file signatures.
+- **WebFox Web Scanner:** Deep phishing and infrastructure analysis.
+- **AI Telemetry:** Real-time summary and conversational AI assistant for SOC analysts.
+
+Visit https://threatatlas.luckyverse.tech for more information.

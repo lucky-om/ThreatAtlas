@@ -1,38 +1,15 @@
 {
-  "name": "threatatlas",
-  "private": true,
+  "name": "threatatlas-root",
   "version": "1.0.0",
-  "type": "module",
+  "private": true,
   "scripts": {
-    "dev": "vite",
-    "dev:server": "node server.js",
-    "dev:worker": "node worker.js",
-    "build": "tsc && vite build",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview",
-    "start": "node server.js",
-    "worker": "node worker.js",
-    "start:all": "node server.js & node worker.js"
-  },
-  "dependencies": {
-    "bullmq": "^6.2.0",
-    "dotenv": "^17.4.2",
-    "express": "^4.19.2",
-    "form-data": "^4.0.6",
-    "http-proxy-middleware": "^3.0.0",
-    "ioredis": "^6.0.0",
-    "jspdf": "^4.2.1",
-    "lucide-react": "^0.395.0",
-    "multer": "^2.2.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.23.1"
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "build:frontend": "cd frontend && npm run build"
   },
   "devDependencies": {
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.0",
-    "typescript": "^5.2.2",
-    "vite": "^5.2.11"
+    "concurrently": "^10.0.5"
   }
 }

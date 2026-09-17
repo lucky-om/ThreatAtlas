@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/logo-round.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/logo-round.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/logo-round.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:;" />
+    <meta name="theme-color" content="#0a0f1e" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="ThreatAtlas — AI-powered cybersecurity threat intelligence platform. Analyze URLs, IPs, domains, file hashes, and websites in real-time using 7 integrated engines." />
+    <meta name="keywords" content="threat intelligence, cybersecurity, URL scanner, malware analysis, phishing detection, domain analysis, IP lookup, hash lookup, SOC, SIEM, security audit" />
+    <meta name="author" content="Lucky" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="bingbot" content="index, follow" />
+    <link rel="canonical" href="https://threatatlas.luckyverse.tech" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://threatatlas.luckyverse.tech" />
+    <meta property="og:title" content="ThreatAtlas — AI Cybersecurity Intelligence Platform" />
+    <meta property="og:description" content="Analyze URLs, IPs, domains, file hashes, and websites in real-time using VirusTotal, MalwareBazaar, URLhaus, and AI-powered engines." />
+    <meta property="og:image" content="https://threatatlas.luckyverse.tech/images/banner.png" />
+    <meta property="og:image:alt" content="ThreatAtlas — AI-Powered Cybersecurity Intelligence" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="ThreatAtlas" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@threatatlas" />
+    <meta name="twitter:creator" content="@threatatlas" />
+    <meta name="twitter:title" content="ThreatAtlas — Cybersecurity Intelligence Platform" />
+    <meta name="twitter:description" content="Analyze URLs, IPs, domains, and file hashes with 70+ security engines, YARA matching, and Atlas Intelligence." />
+    <meta name="twitter:image" content="https://threatatlas.luckyverse.tech/images/banner.png" />
+    <meta name="twitter:image:alt" content="ThreatAtlas — Cybersecurity Intelligence" />
+
+    <!-- Performance: DNS prefetch for external services -->
+    <link rel="dns-prefetch" href="https://mb-api.abuse.ch" />
+    <link rel="dns-prefetch" href="https://urlhaus-api.abuse.ch" />
+    <link rel="dns-prefetch" href="https://otx.alienvault.com" />
+    <link rel="dns-prefetch" href="https://ipapi.co" />
+    <link rel="dns-prefetch" href="https://crt.sh" />
+    <link rel="dns-prefetch" href="https://api.groq.com" />
+
+    <!-- Preconnect for critical resources -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://vercel.app" />
+
+    <!-- Fonts: Space Grotesk (display), Playfair Display (header), Outfit (body), JetBrains Mono (code) -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "ThreatAtlas",
+      "alternateName": "ThreatAtlas Security Scanner",
+      "url": "https://threatatlas.luckyverse.tech",
+      "description": "AI-powered cybersecurity threat intelligence platform that analyzes URLs, IPs, domains, file hashes, and websites in real-time using 7 integrated engines.",
+      "applicationCategory": "SecurityApplication",
+      "operatingSystem": "Web Browser",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/Available"
+      },
+      "creator": {
+        "@type": "Person",
+        "name": "Lucky",
+        "url": "https://github.com/lucky"
+      },
+      "license": "https://opensource.org/licenses/MIT",
+      "featureList": [
+        "VirusTotal URL/IP/Domain/Hash analysis",
+        "MalwareBazaar hash lookup",
+        "URLhaus threat intelligence",
+        "AlienVault OTX pulse search",
+        "WHOIS domain information",
+        "SSL certificate details",
+        "Technology stack detection",
+        "AI-powered threat summaries",
+        "crt.sh certificate transparency",
+        "RDAP domain registration"
+      ],
+      "screenshot": "https://threatatlas.luckyverse.tech/screenshot.png",
+      "browserRequirements": "Requires a modern web browser with JavaScript enabled",
+      "softwareVersion": "2.0.0",
+      "dateModified": "2026-09-12"
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://threatatlas.luckyverse.tech"
+        }
+      ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is ThreatAtlas?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "ThreatAtlas is an AI-powered cybersecurity threat intelligence platform that aggregates data from 7 security engines including VirusTotal, MalwareBazaar, URLhaus, and AlienVault OTX to provide comprehensive threat analysis."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What can I scan with ThreatAtlas?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "You can scan URLs, IP addresses, domain names, file hashes (MD5, SHA-1, SHA-256), and full websites for security threats, malware detection, and vulnerability assessment."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is ThreatAtlas free to use?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, ThreatAtlas is completely free and open-source under the MIT license. No registration or API keys required for basic usage."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <noscript>
+      <div style="padding:2rem;text-align:center;color:#e2e8f0;background:#07050a;min-height:100vh;font-family:Inter,sans-serif">
+        <h1 style="font-size:2rem;margin-bottom:1rem;color:#ff4500">ThreatAtlas</h1>
+        <p style="font-size:1.125rem;opacity:0.8">Please enable JavaScript to use ThreatAtlas — AI-Powered Cybersecurity Intelligence Platform.</p>
+      </div>
+    </noscript>
+  </body>
+</html>
