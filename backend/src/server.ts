@@ -15,23 +15,36 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
 
-// ── CORS: allow only configured origins ───────────────────────────────────────
+// ── CORS ────────────────────────────────────────────────────────────────────
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3002')
   .split(',')
   .map(o => o.trim())
   .filter(Boolean);
 
+// Patterns always allowed regardless of ALLOWED_ORIGINS env var
+const ALWAYS_ALLOWED_PATTERNS = [
+  /^https:\/\/.*\.vercel\.app$/,         // any Vercel preview/prod deployment
+  /^https:\/\/.*\.luckyverse\.tech$/,    // any luckyverse.tech subdomain
+  /^http:\/\/localhost:\d+$/,            // local development
+];
+
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (e.g., Render health checks, curl)
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS: origin ${origin} not allowed`));
-    }
+    // No origin = server-side requests (Render health checks, curl) — allow
+    if (!origin) return callback(null, true);
+    // Check exact matches from env var
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Check pattern matches (Vercel, luckyverse.tech, localhost)
+    if (ALWAYS_ALLOWED_PATTERNS.some(p => p.test(origin))) return callback(null, true);
+    // Reject everything else
+    console.warn(`[CORS] Blocked origin: ${origin}`);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'x-apikey', 'Authorization'],
 }));
+
 app.use(express.json());
 
 const upload = multer({ 
@@ -40,9 +53,22 @@ const upload = multer({
 });
 
 // --- HEALTH CHECK ---
-app.get('/api/ping', (req, res) => {
+app.get('/api/ping', (_req, res) => {
   res.json({ status: 'ok', message: 'ThreatAtlas Backend Engine V2.0 Active' });
 });
+
+// --- DIAGNOSTIC STATUS (shows what backend sees) ---
+app.get('/api/status', (req, res) => {
+  res.json({
+    status: 'ok',
+    version: '2.0',
+    origin: req.headers.origin || 'none',
+    allowedOrigins,
+    vtKeyConfigured: Boolean(process.env.VT_API_KEY),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 
 // --- WEBFOX ENGINE ---
 app.get('/api/webfox/dns', async (req, res) => {
