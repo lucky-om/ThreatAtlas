@@ -193,6 +193,13 @@ export class ApiError extends Error {
   }
 }
 
+// ── Backend Base URL Helper ────────────────────────────────────────────────
+// In production (Vercel): returns VITE_API_BASE_URL (e.g. https://xxx.onrender.com)
+// In local dev: returns '' so Vite's proxy forwards /api/* → localhost:3001
+export function getBackendBase(): string {
+  return (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+}
+
 // ── In-Memory Fast Cache ───────────────────────────────────────────────────
 const cache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -386,9 +393,8 @@ export async function lookupIpGeo(query: string): Promise<NormalizedIp & { vtAva
 
   const isIp = isValidIp(clean);
 
-  // Call geo-ip via backend proxy — must use absolute backend URL (not relative) on Vercel
-  const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-  const geoUrl = `${backendBase}/api/ipgeo?query=${encodeURIComponent(clean)}`;
+  // Call geo-ip via backend proxy — uses VITE_API_BASE_URL in prod, Vite proxy in dev
+  const geoUrl = `${getBackendBase()}/api/ipgeo?query=${encodeURIComponent(clean)}`;
   const res = await fetch(geoUrl);
   if (!res.ok) throw new ApiError('Failed to fetch geolocation data.', res.status);
   const geo = await res.json();
@@ -455,7 +461,7 @@ export async function getUrlReport(urlOrId: string): Promise<NormalizedAnalysis>
 // Submit a URL for scanning — routes through backend proxy to bypass browser CORS
 export async function scanUrl(url: string): Promise<{ data: { id: string } }> {
   const normalized = normalizeUrlForScan(url);
-  const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+  const backendBase = getBackendBase();
   const apiKey = import.meta.env.VITE_VT_API_KEY || '';
 
   const res = await fetch(`${backendBase}/api/vt/urls`, {
@@ -578,7 +584,7 @@ export async function scanFile(file: File): Promise<{ data: { id: string }, bypa
   form.append('file', file, file.name);
 
   // Send to backend proxy to bypass VT CORS restrictions for POST /files
-  const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+  const backendBase = getBackendBase();
   const apiKey = import.meta.env.VITE_VT_API_KEY || '';
 
   const res = await fetch(`${backendBase}/api/vt/files`, { 

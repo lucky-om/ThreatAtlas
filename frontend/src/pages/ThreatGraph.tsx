@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { detectInputType } from '../services/api';
+import { detectInputType, getBackendBase } from '../services/api';
 import { SEO } from '../components/SEO';
 
 // ── Node & Link Data Types ──────────────────────────────────────────────────
@@ -152,7 +152,7 @@ export const ThreatGraph: React.FC = () => {
 
     try {
       const apiKey = import.meta.env.VITE_VT_API_KEY || '';
-      const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+      const backendBase = getBackendBase();
 
       // Helper: proxy VT GET through backend to avoid browser CORS blocks
       const vtProxy = async (vtPath: string) => {

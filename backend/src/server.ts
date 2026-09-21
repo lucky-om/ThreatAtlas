@@ -52,6 +52,17 @@ const upload = multer({
   limits: { fileSize: 32 * 1024 * 1024 } // 32 MB limit
 });
 
+// --- ROOT ROUTE (Render health check + friendly landing) ---
+app.get('/', (_req, res) => {
+  res.json({
+    name: 'ThreatAtlas Backend Engine',
+    version: '2.0',
+    status: 'online',
+    docs: '/api/status',
+    ping: '/api/ping',
+  });
+});
+
 // --- HEALTH CHECK ---
 app.get('/api/ping', (_req, res) => {
   res.json({ status: 'ok', message: 'ThreatAtlas Backend Engine V2.0 Active' });
@@ -64,7 +75,8 @@ app.get('/api/status', (req, res) => {
     version: '2.0',
     origin: req.headers.origin || 'none',
     allowedOrigins,
-    vtKeyConfigured: Boolean(process.env.VT_API_KEY),
+    vtKeyConfigured: Boolean(process.env.VT_API_KEY || process.env.VITE_VT_API_KEY),
+    groqKeyConfigured: Boolean(process.env.GROQ_API_KEY),
     timestamp: new Date().toISOString(),
   });
 });
