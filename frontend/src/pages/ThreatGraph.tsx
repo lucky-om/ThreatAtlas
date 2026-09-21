@@ -152,55 +152,33 @@ export const ThreatGraph: React.FC = () => {
 
     try {
       const apiKey = import.meta.env.VITE_VT_API_KEY || '';
-      const headers = apiKey ? { 'x-apikey': apiKey } : undefined;
+      const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+
+      // Helper: proxy VT GET through backend to avoid browser CORS blocks
+      const vtProxy = async (vtPath: string) => {
+        const r = await fetch(`${backendBase}/api/vt/proxy?path=${encodeURIComponent(vtPath)}`, {
+          headers: apiKey ? { 'x-apikey': apiKey } : {},
+        });
+        if (!r.ok) return null;
+        return r.json();
+      };
 
       if (inType === 'domain' || inType === 'ip') {
         const typeParam = inType === 'domain' ? 'domains' : 'ip_addresses';
-        const res = await fetch(`https://www.virustotal.com/api/v3/${typeParam}/${encodeURIComponent(q)}/resolutions?limit=8`, { headers });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.data && Array.isArray(json.data)) {
-            json.data.forEach((r: any, idx: number) => {
-              const ip = r.attributes?.ip_address || r.id;
-              if (ip && ip !== q) {
-                const angle = (idx / json.data.length) * Math.PI * 2;
-                const distance = 140 + Math.random() * 40;
-                newNodes.push({
-                  id: `res_${idx}`,
-                  label: ip,
-                  type: 'ip',
-                  verdict: (r.attributes?.last_analysis_stats?.malicious || 0) > 0 ? 'malicious' : 'clean',
-                  threatScore: (r.attributes?.last_analysis_stats?.malicious || 0) * 10,
-                  details: `Resolved IP address from DNS history (Recorded: ${r.attributes?.date ? new Date(r.attributes.date * 1000).toLocaleDateString() : 'N/A'})`,
-                  x: Math.cos(angle) * distance,
-                  y: Math.sin(angle) * distance,
-                  vx: 0,
-                  vy: 0,
-                  radius: 16,
-                  color: '#fb923c',
-                  targetLink: `/ip/${ip}`
-                });
-                newLinks.push({ source: 'root', target: `res_${idx}`, label: 'Resolves To' });
-              }
-            });
-          }
-        }
-      } else if (inType === 'hash') {
-        const res = await fetch(`https://www.virustotal.com/api/v3/files/${encodeURIComponent(q)}/contacted_ips?limit=8`, { headers });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.data && Array.isArray(json.data)) {
-            json.data.forEach((r: any, idx: number) => {
-              const ip = r.id;
+        const json = await vtProxy(`/${typeParam}/${encodeURIComponent(q)}/resolutions?limit=8`);
+        if (json?.data && Array.isArray(json.data)) {
+          json.data.forEach((r: any, idx: number) => {
+            const ip = r.attributes?.ip_address || r.id;
+            if (ip && ip !== q) {
               const angle = (idx / json.data.length) * Math.PI * 2;
               const distance = 140 + Math.random() * 40;
               newNodes.push({
-                id: `cip_${idx}`,
+                id: `res_${idx}`,
                 label: ip,
                 type: 'ip',
                 verdict: (r.attributes?.last_analysis_stats?.malicious || 0) > 0 ? 'malicious' : 'clean',
                 threatScore: (r.attributes?.last_analysis_stats?.malicious || 0) * 10,
-                details: `Network egress connection from dynamic execution sandbox (${r.attributes?.country || 'Unknown Country'})`,
+                details: `Resolved IP address from DNS history (Recorded: ${r.attributes?.date ? new Date(r.attributes.date * 1000).toLocaleDateString() : 'N/A'})`,
                 x: Math.cos(angle) * distance,
                 y: Math.sin(angle) * distance,
                 vx: 0,
@@ -209,9 +187,34 @@ export const ThreatGraph: React.FC = () => {
                 color: '#fb923c',
                 targetLink: `/ip/${ip}`
               });
-              newLinks.push({ source: 'root', target: `cip_${idx}`, label: 'Network Contact' });
+              newLinks.push({ source: 'root', target: `res_${idx}`, label: 'Resolves To' });
+            }
+          });
+        }
+      } else if (inType === 'hash') {
+        const json = await vtProxy(`/files/${encodeURIComponent(q)}/contacted_ips?limit=8`);
+        if (json?.data && Array.isArray(json.data)) {
+          json.data.forEach((r: any, idx: number) => {
+            const ip = r.id;
+            const angle = (idx / json.data.length) * Math.PI * 2;
+            const distance = 140 + Math.random() * 40;
+            newNodes.push({
+              id: `cip_${idx}`,
+              label: ip,
+              type: 'ip',
+              verdict: (r.attributes?.last_analysis_stats?.malicious || 0) > 0 ? 'malicious' : 'clean',
+              threatScore: (r.attributes?.last_analysis_stats?.malicious || 0) * 10,
+              details: `Network egress connection from dynamic execution sandbox (${r.attributes?.country || 'Unknown Country'})`,
+              x: Math.cos(angle) * distance,
+              y: Math.sin(angle) * distance,
+              vx: 0,
+              vy: 0,
+              radius: 16,
+              color: '#fb923c',
+              targetLink: `/ip/${ip}`
             });
-          }
+            newLinks.push({ source: 'root', target: `cip_${idx}`, label: 'Network Contact' });
+          });
         }
       }
 

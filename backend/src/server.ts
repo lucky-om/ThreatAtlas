@@ -158,7 +158,67 @@ app.post('/api/vt/files', upload.single('file'), async (req, res) => {
   }
 });
 
+// Proxy for VirusTotal URL scanning to avoid CORS issues in the browser
+app.post('/api/vt/urls', async (req, res) => {
+  const apiKey = req.headers['x-apikey'];
+  if (!apiKey || typeof apiKey !== 'string') {
+    return res.status(401).json({ error: 'API key required in x-apikey header' });
+  }
 
+  const { url } = req.body;
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({ error: 'URL required in request body' });
+  }
+
+  try {
+    const formData = new URLSearchParams();
+    formData.append('url', url);
+
+    const response = await fetch('https://www.virustotal.com/api/v3/urls', {
+      method: 'POST',
+      headers: {
+        'x-apikey': apiKey,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData.toString(),
+    });
+
+    const data = await response.json();
+    if (!response.ok) return res.status(response.status).json(data);
+    res.json(data);
+  } catch (error: any) {
+    res.status(500).json({ error: 'VT URL proxy failed', details: error.message });
+  }
+});
+
+// Generic proxy for VT GET requests (used by Threat Graph for relation queries)
+app.get('/api/vt/proxy', async (req, res) => {
+  const apiKey = req.headers['x-apikey'];
+  if (!apiKey || typeof apiKey !== 'string') {
+    return res.status(401).json({ error: 'API key required in x-apikey header' });
+  }
+
+  const { path: vtPath } = req.query;
+  if (!vtPath || typeof vtPath !== 'string') {
+    return res.status(400).json({ error: 'path query param required' });
+  }
+
+  // Only allow VT API v3 paths for security
+  if (!vtPath.startsWith('/')) {
+    return res.status(400).json({ error: 'path must start with /' });
+  }
+
+  try {
+    const response = await fetch(`https://www.virustotal.com/api/v3${vtPath}`, {
+      headers: { 'x-apikey': apiKey },
+    });
+    const data = await response.json();
+    if (!response.ok) return res.status(response.status).json(data);
+    res.json(data);
+  } catch (error: any) {
+    res.status(500).json({ error: 'VT proxy failed', details: error.message });
+  }
+});
 
 
 // --- FORENSICS ENGINE ---

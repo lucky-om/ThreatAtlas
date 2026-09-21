@@ -386,8 +386,10 @@ export async function lookupIpGeo(query: string): Promise<NormalizedIp & { vtAva
 
   const isIp = isValidIp(clean);
 
-  // Call geo-ip via backend proxy to avoid Mixed Content & corsproxy rate limits
-  const res = await fetch(`/api/ipgeo?query=${encodeURIComponent(clean)}`);
+  // Call geo-ip via backend proxy — must use absolute backend URL (not relative) on Vercel
+  const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+  const geoUrl = `${backendBase}/api/ipgeo?query=${encodeURIComponent(clean)}`;
+  const res = await fetch(geoUrl);
   if (!res.ok) throw new ApiError('Failed to fetch geolocation data.', res.status);
   const geo = await res.json();
 
@@ -450,16 +452,27 @@ export async function getUrlReport(urlOrId: string): Promise<NormalizedAnalysis>
   return normalized;
 }
 
-// Submit a URL for scanning
+// Submit a URL for scanning — routes through backend proxy to bypass browser CORS
 export async function scanUrl(url: string): Promise<{ data: { id: string } }> {
   const normalized = normalizeUrlForScan(url);
-  const form = new URLSearchParams();
-  form.append('url', normalized);
-  return vtFetch<{ data: { id: string } }>('/urls', {
+  const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+  const apiKey = import.meta.env.VITE_VT_API_KEY || '';
+
+  const res = await fetch(`${backendBase}/api/vt/urls`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: form.toString()
+    headers: {
+      'Content-Type': 'application/json',
+      'x-apikey': apiKey,
+    },
+    body: JSON.stringify({ url: normalized }),
   });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new ApiError(errData.error || errData.message || 'URL scan failed', res.status);
+  }
+
+  return res.json();
 }
 
 // Pure JS fallback SHA-256 for non-secure HTTP contexts where crypto.subtle is undefined
@@ -565,10 +578,10 @@ export async function scanFile(file: File): Promise<{ data: { id: string }, bypa
   form.append('file', file, file.name);
 
   // Send to backend proxy to bypass VT CORS restrictions for POST /files
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+  const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
   const apiKey = import.meta.env.VITE_VT_API_KEY || '';
 
-  const res = await fetch(`${baseUrl}/vt/files`, { 
+  const res = await fetch(`${backendBase}/api/vt/files`, { 
     method: 'POST', 
     body: form,
     headers: {
