@@ -226,14 +226,15 @@ export const ThreatGraph: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [loadPreset]);
+  }, []);
 
   useEffect(() => {
     if (initialQuery) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       searchTargetGraph(initialQuery);
+    } else {
+      loadPreset(0);
     }
-  }, [initialQuery, searchTargetGraph]);
+  }, [initialQuery, searchTargetGraph, loadPreset]);
 
   // ── Physics Simulation Step ───────────────────────────────────────────────
   useEffect(() => {
@@ -512,6 +513,31 @@ export const ThreatGraph: React.FC = () => {
               {loading ? 'ANALYZING...' : 'PIVOT'}
             </button>
           </form>
+
+          {/* Preset Clusters Selector */}
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', color: '#64748b', fontFamily: 'var(--font-mono)' }}>DEMOS:</span>
+            {PRESET_CLUSTERS.map((p, idx) => (
+              <button
+                key={p.name}
+                type="button"
+                onClick={() => loadPreset(idx)}
+                style={{
+                  padding: '6px 12px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid #334155',
+                  borderRadius: '6px',
+                  color: '#cbd5e1',
+                  fontSize: '11px',
+                  fontFamily: 'var(--font-mono)',
+                  cursor: 'pointer'
+                }}
+                title={`Load ${p.name}`}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
 
         </div>
         {errorMsg && (
