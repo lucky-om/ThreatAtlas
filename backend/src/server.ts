@@ -15,31 +15,10 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
 
-// ── CORS ────────────────────────────────────────────────────────────────────
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3002')
-  .split(',')
-  .map(o => o.trim())
-  .filter(Boolean);
-
-// Patterns always allowed regardless of ALLOWED_ORIGINS env var
-const ALWAYS_ALLOWED_PATTERNS = [
-  /^https:\/\/.*\.vercel\.app$/,         // any Vercel preview/prod deployment
-  /^https:\/\/.*\.luckyverse\.tech$/,    // any luckyverse.tech subdomain
-  /^http:\/\/localhost:\d+$/,            // local development
-];
-
 app.use(cors({
-  origin: (origin, callback) => {
-    // No origin = server-side requests (curl, local dev) — allow
-    if (!origin) return callback(null, true);
-    if (origin.startsWith('http://localhost:') || origin === 'https://threatatlas.vercel.app') {
-      return callback(null, true);
-    }
-    callback(new Error('Not allowed by CORS'));
-  },
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'x-apikey', 'Access-Control-Allow-Private-Network'],
-  credentials: true
+  origin: '*', // Allow absolutely anything
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'x-apikey', 'Authorization', 'Access-Control-Allow-Private-Network']
 }));
 
 // Support Private Network Access (Chrome CORS requirement for public -> localhost)
