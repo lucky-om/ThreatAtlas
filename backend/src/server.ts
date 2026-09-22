@@ -162,11 +162,12 @@ app.get('/api/ipgeo', async (req, res) => {
 // Proxy for VirusTotal file uploads to avoid CORS issues in the browser
 app.post('/api/vt/files', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  const apiKey = req.headers['x-apikey'];
+  // Use client key or fall back to server env var
+  const apiKey = (req.headers['x-apikey'] as string) || process.env.VT_API_KEY || '';
   
-  if (!apiKey || typeof apiKey !== 'string') {
+  if (!apiKey) {
     fs.unlinkSync(req.file.path);
-    return res.status(401).json({ error: 'API key required in x-apikey header' });
+    return res.status(401).json({ error: 'VirusTotal API key not configured. Set VT_API_KEY in Render environment variables.' });
   }
 
   try {
@@ -198,9 +199,10 @@ app.post('/api/vt/files', upload.single('file'), async (req, res) => {
 
 // Proxy for VirusTotal URL scanning to avoid CORS issues in the browser
 app.post('/api/vt/urls', async (req, res) => {
-  const apiKey = req.headers['x-apikey'];
-  if (!apiKey || typeof apiKey !== 'string') {
-    return res.status(401).json({ error: 'API key required in x-apikey header' });
+  // Use client key or fall back to server env var
+  const apiKey = (req.headers['x-apikey'] as string) || process.env.VT_API_KEY || '';
+  if (!apiKey) {
+    return res.status(401).json({ error: 'VirusTotal API key not configured. Set VT_API_KEY in Render environment variables.' });
   }
 
   const { url } = req.body;
@@ -229,31 +231,36 @@ app.post('/api/vt/urls', async (req, res) => {
   }
 });
 
-// Generic proxy for VT GET requests (used by Threat Graph for relation queries)
+// Generic proxy for VT GET requests (hash lookups, IP/domain queries, analysis polling, relations)
+// Supports both client-passed x-apikey and server-side VT_API_KEY env var as fallback
 app.get('/api/vt/proxy', async (req, res) => {
-  const apiKey = req.headers['x-apikey'];
-  if (!apiKey || typeof apiKey !== 'string') {
-    return res.status(401).json({ error: 'API key required in x-apikey header' });
+  // Use client-provided key or fall back to server env var
+  const apiKey = (req.headers['x-apikey'] as string) || process.env.VT_API_KEY || '';
+  if (!apiKey) {
+    return res.status(401).json({ error: 'VirusTotal API key not configured. Set VT_API_KEY in Render environment variables.' });
   }
 
   const { path: vtPath } = req.query;
   if (!vtPath || typeof vtPath !== 'string') {
-    return res.status(400).json({ error: 'path query param required' });
+    return res.status(400).json({ error: 'path query param required (e.g. /files/abc123)' });
   }
 
-  // Only allow VT API v3 paths for security
+  // Security: only allow VT API v3 paths
   if (!vtPath.startsWith('/')) {
     return res.status(400).json({ error: 'path must start with /' });
   }
 
   try {
-    const response = await fetch(`https://www.virustotal.com/api/v3${vtPath}`, {
+    const vtUrl = `https://www.virustotal.com/api/v3${vtPath}`;
+    console.log(`[VT Proxy] GET ${vtPath}`);
+    const response = await fetch(vtUrl, {
       headers: { 'x-apikey': apiKey },
     });
     const data = await response.json();
-    if (!response.ok) return res.status(response.status).json(data);
-    res.json(data);
+    // Forward exact VT status code so client can handle 404, 429, etc.
+    return res.status(response.status).json(data);
   } catch (error: any) {
+    console.error('[VT Proxy] Error:', error.message);
     res.status(500).json({ error: 'VT proxy failed', details: error.message });
   }
 });

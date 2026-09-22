@@ -219,23 +219,36 @@ function setCache<T>(key: string, data: T): T {
   return data;
 }
 
-// Low-level fetch wrapper with error handling
+// Low-level fetch wrapper — routes ALL VirusTotal requests through the backend proxy
+// to bypass browser CORS restrictions in production. The backend at /api/vt/proxy
+// forwards the request server-side to VirusTotal and returns the response.
 async function vtFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const cacheKey = `${options?.method || 'GET'}:${path}`;
-  if (!options?.method || options.method === 'GET') {
+  const method = options?.method || 'GET';
+  const cacheKey = `${method}:${path}`;
+  if (method === 'GET') {
     const cached = getCached<T>(cacheKey);
     if (cached) return cached;
   }
 
-  const url = `https://www.virustotal.com/api/v3${path}`;
+  const backendBase = getBackendBase();
   const apiKey = import.meta.env.VITE_VT_API_KEY || '';
-  
-  const headers = new Headers(options?.headers);
-  if (apiKey) {
-    headers.set('x-apikey', apiKey);
+
+  // All VT calls go through backend proxy — this avoids CORS blocks in production
+  const proxyUrl = `${backendBase}/api/vt/proxy?path=${encodeURIComponent(path)}`;
+
+  const reqHeaders: Record<string, string> = {};
+  if (apiKey) reqHeaders['x-apikey'] = apiKey;
+  // Propagate Content-Type for non-GET if provided
+  if (options?.headers) {
+    const h = new Headers(options.headers);
+    h.forEach((v, k) => { reqHeaders[k] = v; });
   }
 
-  const res = await fetch(url, { ...options, headers });
+  const res = await fetch(proxyUrl, {
+    method,
+    headers: reqHeaders,
+    body: options?.body,
+  });
 
   if (!res.ok) {
     let errMsg = `API error (${res.status})`;
@@ -246,26 +259,23 @@ async function vtFetch<T>(path: string, options?: RequestInit): Promise<T> {
       if (data?.error?.message) {
         errMsg = data.error.message;
         code = data.error.code;
+      } else if (data?.error) {
+        errMsg = typeof data.error === 'string' ? data.error : errMsg;
       }
     } catch (_) { /* ignore parse errors */ }
 
-    if (res.status === 401) throw new ApiError('API key not configured. Please add a valid key in server config.', 401, code);
+    if (res.status === 401) throw new ApiError('Invalid or missing VirusTotal API key. Check your Render environment variables.', 401, code);
     if (res.status === 404) throw new ApiError('Resource not found in threat database.', 404, code);
-    if (res.status === 429) throw new ApiError('API rate limit exceeded. Please wait a minute.', 429, code);
+    if (res.status === 429) throw new ApiError('API rate limit exceeded. Please wait a minute and try again.', 429, code);
     if (res.status === 400) throw new ApiError('Bad Request: ' + errMsg, 400, code);
+    if (res.status === 0 || res.status >= 500) throw new ApiError('Backend unreachable. Is the Render service running? Check /api/ping.', res.status, code);
 
     throw new ApiError(errMsg, res.status, code);
   }
 
-  const contentType = res.headers.get('content-type') || '';
-  let result: any;
-  if (contentType.includes('application/json')) {
-    result = await res.json();
-  } else {
-    result = await res.text();
-  }
+  const result = await res.json().catch(() => res.text());
 
-  if (!options?.method || options.method === 'GET') {
+  if (method === 'GET') {
     setCache(cacheKey, result);
   }
   return result as T;
