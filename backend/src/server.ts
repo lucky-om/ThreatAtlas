@@ -32,17 +32,14 @@ app.use(cors({
   origin: (origin, callback) => {
     // No origin = server-side requests (curl, local dev) — allow
     if (!origin) return callback(null, true);
-    // Check exact matches from env var
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    // Check pattern matches (Vercel, luckyverse.tech, localhost)
-    if (ALWAYS_ALLOWED_PATTERNS.some(p => p.test(origin))) return callback(null, true);
-    // Reject everything else
-    console.warn(`[CORS] Blocked origin: ${origin}`);
-    callback(new Error(`CORS: origin ${origin} not allowed`));
+    if (origin.startsWith('http://localhost:') || origin === 'https://threatatlas.vercel.app') {
+      return callback(null, true);
+    }
+    callback(new Error('Not allowed by CORS'));
   },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'x-apikey', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'x-apikey', 'Access-Control-Allow-Private-Network'],
+  credentials: true
 }));
 
 // Support Private Network Access (Chrome CORS requirement for public -> localhost)
@@ -369,7 +366,7 @@ app.post('/api/atlas/chat', async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-20b',
         messages,
         max_tokens,
         temperature,
