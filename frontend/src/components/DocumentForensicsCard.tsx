@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getBackendBase } from '../services/api';
 
 interface PdfForensicsData {
   pageCount: number;
@@ -30,7 +31,7 @@ export const DocumentForensicsCard: React.FC<{ file?: File }> = ({ file }) => {
       try {
         const formData = new FormData();
         formData.append('file', file);
-        const res = await fetch('/api/forensics/pdf/analyze', {
+        const res = await fetch(`${getBackendBase()}/api/forensics/pdf/analyze`, {
           method: 'POST',
           body: formData,
         });

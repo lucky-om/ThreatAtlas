@@ -194,7 +194,7 @@ export class ApiError extends Error {
 }
 
 // ── Backend Base URL Helper ────────────────────────────────────────────────
-// In production (Vercel): returns VITE_API_BASE_URL (e.g. https://xxx.onrender.com)
+// In production: returns VITE_API_BASE_URL (e.g. your backend domain)
 // In local dev: returns '' so Vite's proxy forwards /api/* → localhost:3001
 export function getBackendBase(): string {
   return (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
@@ -264,11 +264,11 @@ async function vtFetch<T>(path: string, options?: RequestInit): Promise<T> {
       }
     } catch (_) { /* ignore parse errors */ }
 
-    if (res.status === 401) throw new ApiError('Invalid or missing VirusTotal API key. Check your Render environment variables.', 401, code);
+    if (res.status === 401) throw new ApiError('Invalid or missing VirusTotal API key. Check your backend .env variables.', 401, code);
     if (res.status === 404) throw new ApiError('Resource not found in threat database.', 404, code);
     if (res.status === 429) throw new ApiError('API rate limit exceeded. Please wait a minute and try again.', 429, code);
     if (res.status === 400) throw new ApiError('Bad Request: ' + errMsg, 400, code);
-    if (res.status === 0 || res.status >= 500) throw new ApiError('Backend unreachable. Is the Render service running? Check /api/ping.', res.status, code);
+    if (res.status === 0 || res.status >= 500) throw new ApiError('Backend unreachable. Is the local backend running? Check /api/ping.', res.status, code);
 
     throw new ApiError(errMsg, res.status, code);
   }

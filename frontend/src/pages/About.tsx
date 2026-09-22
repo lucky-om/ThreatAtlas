@@ -83,10 +83,11 @@ export const About: React.FC = () => {
           </div>
 
           <h1 style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 'clamp(52px, 7vw, 90px)',
-            lineHeight: 0.95,
-            letterSpacing: '0.02em',
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontSize: 'clamp(28px, 4vw, 48px)',
+            fontWeight: 800,
+            lineHeight: 1.05,
+            letterSpacing: '-0.03em',
             color: 'var(--on-surface)',
             marginBottom: '20px',
           }}>

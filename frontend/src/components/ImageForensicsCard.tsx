@@ -12,6 +12,7 @@ import {
   MapPin,
   FileText
 } from 'lucide-react';
+import { getBackendBase } from '../services/api';
 import { ImageForensicsReport } from '../services/imageForensics';
 import StegoWorker from '../workers/stego.worker?worker';
 
@@ -50,7 +51,7 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report, 
         try {
           const formData = new FormData();
           formData.append('file', file);
-          const res = await fetch('/api/forensics/image/exif', {
+          const res = await fetch(`${getBackendBase()}/api/forensics/image/exif`, {
             method: 'POST',
             body: formData,
             signal: AbortSignal.timeout(10000)

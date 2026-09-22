@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Film, ExternalLink, Loader2, AlertTriangle } from 'lucide-react';
+import { getBackendBase } from '../services/api';
 
 interface VideoForensicsCardProps {
   file?: File | null;
@@ -23,7 +24,7 @@ export const VideoForensicsCard: React.FC<VideoForensicsCardProps> = ({ file }) 
       try {
         const formData = new FormData();
         formData.append('file', file);
-        const res = await fetch('/api/forensics/media/metadata', {
+        const res = await fetch(`${getBackendBase()}/api/forensics/media/metadata`, {
           method: 'POST',
           body: formData,
         });

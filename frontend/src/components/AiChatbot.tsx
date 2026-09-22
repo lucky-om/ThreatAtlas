@@ -242,7 +242,7 @@ export const AiChatbot: React.FC = () => {
             const errData = await res.json().catch(() => ({}));
             if (import.meta.env.DEV) console.error('[Atlas] Engine error:', res.status, errData);
             const statusMsg = res.status === 401
-              ? 'Atlas engine authentication failed. Check GROQ_API_KEY in Render environment.'
+              ? 'Atlas engine authentication failed. Check GROQ_API_KEY in backend .env.'
               : res.status === 429
               ? 'Atlas engine rate limit reached. Please wait a moment before retrying.'
               : res.status === 413
