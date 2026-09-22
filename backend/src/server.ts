@@ -45,6 +45,14 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'x-apikey', 'Authorization'],
 }));
 
+// Support Private Network Access (Chrome CORS requirement for public -> localhost)
+app.use((req, res, next) => {
+  if (req.headers['access-control-request-private-network']) {
+    res.setHeader('Access-Control-Allow-Private-Network', 'true');
+  }
+  next();
+});
+
 app.use(express.json());
 
 const upload = multer({ 
