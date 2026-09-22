@@ -446,12 +446,24 @@ export const ThreatGraph: React.FC = () => {
     isDraggingRef.current = false;
   };
 
-  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+  const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
     const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
     const newScale = Math.min(3, Math.max(0.3, transformRef.current.k * zoomFactor));
     transformRef.current.k = newScale;
-  };
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.addEventListener('wheel', handleWheel, { passive: false });
+    }
+    return () => {
+      if (canvas) {
+        canvas.removeEventListener('wheel', handleWheel);
+      }
+    };
+  }, [handleWheel]);
 
   return (
     <div style={{ position: 'relative', minHeight: '100vh', paddingTop: '70px', background: '#0b111e', color: '#c3c8d4' }}>
@@ -560,7 +572,6 @@ export const ThreatGraph: React.FC = () => {
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
-          onWheel={handleWheel}
           style={{ width: '100%', height: '100%', cursor: 'grab', background: '#080d16' }}
         />
 

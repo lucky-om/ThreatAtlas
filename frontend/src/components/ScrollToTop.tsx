@@ -27,7 +27,7 @@ export const ScrollToTopButton: React.FC = () => {
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.8 }}
-          style={{ position: 'fixed', bottom: '24px', right: '90px', zIndex: 998 }}
+          style={{ position: 'fixed', bottom: '24px', left: '24px', zIndex: 998 }}
         >
           <button
             onClick={scrollToTop}

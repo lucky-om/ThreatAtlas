@@ -43,6 +43,20 @@ export interface TechStackResult {
   serverBanner: string;
   poweredBy: string;
   exposedPaths: Array<{ path: string; status: number; risk: 'critical' | 'high' | 'medium' }>;
+  metadata?: {
+    title: string | null;
+    description: string | null;
+    ogImage: string | null;
+  };
+}
+
+export interface LivenessData {
+  isAlive: boolean;
+  statusCode?: number;
+  statusText?: string;
+  responseTimeMs?: number;
+  finalUrl?: string;
+  headers?: Record<string, string>;
 }
 
 export interface WebFoxReconResult {
@@ -59,9 +73,9 @@ export interface WebFoxReconResult {
   httpStatus?: number;
   latencyMs?: number;
   openPorts?: number[];
-  cves?: string[];
-  cpes?: string[];
+  liveness?: LivenessData;
   techStack?: TechStackResult;
+  ports?: Record<number, 'open' | 'closed' | 'timeout'>;
   crawl?: WebFoxCrawlResult;
 }
 
@@ -100,89 +114,7 @@ const WAF_SIGNATURES: Array<{ name: string; headers: string[]; cookies: string[]
   { name: 'Varnish Cache',      headers: ['x-varnish', 'x-varnish-hits'], cookies: [] },
 ];
 
-// ── Tech Stack Signatures (50+ CMS/Framework/CDN — ported from WebFox tech_detect.py) ─────────
-const TECH_SIGNATURES: Array<{ name: string; patterns: string[] }> = [
-  // CMS
-  { name: 'WordPress',     patterns: ['wp-content', 'wp-includes', 'wordpress'] },
-  { name: 'Joomla',        patterns: ['joomla', '/components/com_'] },
-  { name: 'Drupal',        patterns: ['drupal', '/sites/default/files'] },
-  { name: 'Magento',       patterns: ['magento', 'mage.cookies'] },
-  { name: 'Shopify',       patterns: ['cdn.shopify.com', 'shopify.theme'] },
-  { name: 'Ghost',         patterns: ['ghost.org', '/ghost/api/'] },
-  { name: 'Wix',           patterns: ['wix.com', 'wixstatic.com'] },
-  { name: 'Squarespace',   patterns: ['squarespace.com', 'static.squarespace.com'] },
-  { name: 'OpenCart',      patterns: ['route=common', 'opencart'] },
-  { name: 'PrestaShop',    patterns: ['prestashop', '/modules/'] },
-  // JS Frameworks
-  { name: 'React',         patterns: ['react-dom', '__reactfiber', 'data-reactroot'] },
-  { name: 'Vue.js',        patterns: ['vue.min.js', '__vue__'] },
-  { name: 'Angular',       patterns: ['ng-version', 'angular.min.js'] },
-  { name: 'Next.js',       patterns: ['_next/static', '__next_data__'] },
-  { name: 'Nuxt.js',       patterns: ['__nuxt', '_nuxt/'] },
-  { name: 'Svelte',        patterns: ['svelte', '__svelte'] },
-  { name: 'Astro',         patterns: ['astro-island', 'astro-script'] },
-  // Backend Frameworks
-  { name: 'Laravel',       patterns: ['laravel_session', 'laravel'] },
-  { name: 'Django',        patterns: ['csrfmiddlewaretoken', 'django'] },
-  { name: 'Ruby on Rails', patterns: ['authenticity_token', 'rails', 'x-rack-cache'] },
-  { name: 'Express.js',    patterns: ['x-powered-by: express'] },
-  { name: 'FastAPI',       patterns: ['fastapi', 'starlette'] },
-  { name: 'ASP.NET',       patterns: ['x-aspnet-version', '__viewstate', 'asp.net'] },
-  // Web Servers
-  { name: 'Nginx',         patterns: ['server: nginx'] },
-  { name: 'Apache',        patterns: ['server: apache'] },
-  { name: 'IIS',           patterns: ['server: microsoft-iis', 'x-powered-by: asp.net'] },
-  { name: 'LiteSpeed',     patterns: ['server: litespeed', 'x-powered-by: lsphp'] },
-  { name: 'Caddy',         patterns: ['server: caddy'] },
-  // CDN / Cloud
-  { name: 'Cloudflare CDN', patterns: ['cf-ray', 'cloudflare'] },
-  { name: 'Fastly',        patterns: ['x-served-by', 'fastly-io-info'] },
-  { name: 'AWS CloudFront', patterns: ['x-amz-cf-id'] },
-  { name: 'Vercel',        patterns: ['x-vercel-id', 'x-vercel-cache'] },
-  { name: 'Netlify',       patterns: ['x-nf-request-id', 'netlify'] },
-  // Analytics / Tracking
-  { name: 'Google Analytics', patterns: ['google-analytics.com', 'gtag(', 'ua-'] },
-  { name: 'Google Tag Manager', patterns: ['googletagmanager.com', 'gtm-'] },
-  { name: 'Facebook Pixel', patterns: ['connect.facebook.net', 'fbq('] },
-  { name: 'HotJar',        patterns: ['hotjar.com', 'hjid'] },
-  // JS Libraries
-  { name: 'jQuery',        patterns: ['jquery', 'jquery.min.js'] },
-  { name: 'Bootstrap',     patterns: ['bootstrap.min.js', 'bootstrap.min.css'] },
-  { name: 'Tailwind CSS',  patterns: ['tailwindcss', 'tailwind.config'] },
-  { name: 'Font Awesome',  patterns: ['fontawesome', 'fa-'] },
-  // Payments
-  { name: 'Stripe',        patterns: ['js.stripe.com', 'pk_live_', 'pk_test_'] },
-  { name: 'PayPal',        patterns: ['paypalobjects.com', 'paypal.com/sdk'] },
-  // DevOps / Infrastructure
-  { name: 'Kubernetes',    patterns: ['kubernetes', 'k8s'] },
-  { name: 'Docker',        patterns: ['x-docker', 'docker-proxy'] },
-  { name: 'Prometheus',    patterns: ['/metrics', 'prometheus'] },
-  { name: 'Grafana',       patterns: ['grafana', 'grafana.com'] },
-];
-
-// ── Sensitive Paths Probe (ported from WebFox tech_detect.py) ─────────────────
-const SENSITIVE_PATHS: Array<{ path: string; risk: 'critical' | 'high' | 'medium'; label: string }> = [
-  { path: '/.git/HEAD', risk: 'critical', label: 'Git Repository Exposed' },
-  { path: '/.env', risk: 'critical', label: '.env Config File Exposed' },
-  { path: '/wp-login.php', risk: 'high', label: 'WordPress Login Exposed' },
-  { path: '/phpmyadmin', risk: 'critical', label: 'phpMyAdmin Panel Exposed' },
-  { path: '/admin', risk: 'high', label: 'Admin Panel Exposed' },
-  { path: '/.htaccess', risk: 'high', label: 'Apache Config Exposed' },
-  { path: '/config.php', risk: 'critical', label: 'PHP Config File Exposed' },
-  { path: '/api/v1', risk: 'medium', label: 'REST API Endpoint Exposed' },
-  { path: '/graphql', risk: 'medium', label: 'GraphQL Endpoint Exposed' },
-  { path: '/swagger.json', risk: 'medium', label: 'Swagger API Docs Exposed' },
-  { path: '/openapi.json', risk: 'medium', label: 'OpenAPI Schema Exposed' },
-  { path: '/.well-known/security.txt', risk: 'medium', label: 'Security Policy File' },
-  { path: '/actuator/health', risk: 'high', label: 'Spring Boot Actuator Exposed' },
-  { path: '/server-status', risk: 'high', label: 'Apache Server Status Exposed' },
-  { path: '/.DS_Store', risk: 'medium', label: 'macOS .DS_Store Leaked' },
-  { path: '/backup.zip', risk: 'critical', label: 'Backup Archive Exposed' },
-  { path: '/dump.sql', risk: 'critical', label: 'Database Dump Exposed' },
-  { path: '/web.config', risk: 'high', label: 'IIS web.config Exposed' },
-  { path: '/robots.txt', risk: 'medium', label: 'robots.txt (recon info)' },
-  { path: '/sitemap.xml', risk: 'medium', label: 'Sitemap Available' },
-];
+// (Removed local TECH_SIGNATURES and SENSITIVE_PATHS as they are now handled by the backend /api/webfox/fingerprint endpoint)
 
 // ── DoH DNS Resolver ───────────────────────────────────────────────────────────
 export async function resolveDnsRecords(domain: string): Promise<DnsRecord[]> {
@@ -233,12 +165,12 @@ export async function discoverSubdomains(domain: string): Promise<string[]> {
         const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
         const targetUrl = `https://crt.sh/?q=%.${encodeURIComponent(cleanDomain)}&output=json`;
         const res = await fetch(`${backendBase}/api/webfox/proxy?url=${encodeURIComponent(targetUrl)}`, {
-          signal: AbortSignal.timeout(7000),
+          signal: AbortSignal.timeout(12000),
         });
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {
-            for (const item of data.slice(0, 80)) {
+            for (const item of data.slice(0, 100)) {
               const nameVal: string = item.name_value || '';
               nameVal.split('\n').forEach(filterAndAdd);
             }
@@ -281,40 +213,30 @@ export async function discoverSubdomains(domain: string): Promise<string[]> {
       } catch { /* Fallback */ }
     })(),
 
-    // Source 4: CertSpotter API
+    // Source 4: CertSpotter API (Supports CORS, direct fetch)
     (async () => {
       try {
-        const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
         const targetUrl = `https://api.certspotter.com/v1/issuances?domain=${encodeURIComponent(cleanDomain)}&include_subdomains=true&expand=dns_names`;
-        const res = await fetch(`${backendBase}/api/webfox/proxy?url=${encodeURIComponent(targetUrl)}`, {
-          signal: AbortSignal.timeout(6000),
-        });
+        const res = await fetch(targetUrl, { signal: AbortSignal.timeout(8000) });
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {
             for (const item of data) {
-              if (Array.isArray(item.dns_names)) {
-                item.dns_names.forEach(filterAndAdd);
-              }
+              if (Array.isArray(item.dns_names)) item.dns_names.forEach(filterAndAdd);
             }
           }
         }
       } catch { /* Fallback */ }
     })(),
 
-    // Source 5: Anubis (jldc.me)
+    // Source 5: Anubis (jldc.me) (Supports CORS, direct fetch)
     (async () => {
       try {
-        const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
         const targetUrl = `https://jldc.me/anubis/subdomains/${encodeURIComponent(cleanDomain)}`;
-        const res = await fetch(`${backendBase}/api/webfox/proxy?url=${encodeURIComponent(targetUrl)}`, {
-          signal: AbortSignal.timeout(6000),
-        });
+        const res = await fetch(targetUrl, { signal: AbortSignal.timeout(8000) });
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data)) {
-            data.forEach(filterAndAdd);
-          }
+          if (Array.isArray(data)) data.forEach(filterAndAdd);
         }
       } catch { /* Fallback */ }
     })(),
@@ -453,62 +375,8 @@ export function auditSecurityHeaders(headers: Record<string, string>): {
   };
 }
 
-// ── Technology Stack Fingerprinting (ported from WebFox tech_detect.py) ────────
-async function detectTechStack(domain: string): Promise<TechStackResult> {
-  let body = '';
-  const headersRaw: Record<string, string> = {};
-  let serverBanner = 'Unknown';
-  let poweredBy = 'Unknown';
 
-  // Attempt a quick HEAD-then-GET to detect stack from headers + body
-  // Fetch via proxy to bypass CORS
-  try {
-    const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-    const proxyUrl = `${backendBase}/api/webfox/proxy?url=${encodeURIComponent(domain)}`;
-    const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
-    if (res.ok) {
-      const data = await res.json();
-      Object.assign(headersRaw, data.headers || {});
-      serverBanner = headersRaw['server'] || 'Hidden';
-      poweredBy = headersRaw['x-powered-by'] || 'Hidden';
-      body = (data.body || '').toLowerCase();
-    }
-  } catch {
-    // Proxy failed or timeout
-  }
 
-  const combined = body + ' ' + JSON.stringify(headersRaw).toLowerCase();
-  const detectedTechs: string[] = [];
-
-  for (const tech of TECH_SIGNATURES) {
-    if (tech.patterns.some(p => combined.includes(p.toLowerCase()))) {
-      detectedTechs.push(tech.name);
-    }
-  }
-
-  // Sensitive path probe — browsers can only check public paths via fetch
-  const exposedPaths: TechStackResult['exposedPaths'] = [];
-  const pathsToCheck = SENSITIVE_PATHS.slice(0, 10); // Limit to 10 to avoid rate limits
-  await Promise.allSettled(
-    pathsToCheck.map(async ({ path, risk }) => {
-      for (const proto of ['https', 'http']) {
-        try {
-          const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-          const proxyUrl = `${backendBase}/api/webfox/proxy?url=${encodeURIComponent(`${proto}://${domain}${path}`)}`;
-          const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(6000) });
-          if (r.ok) {
-            exposedPaths.push({ path: `${proto}://${domain}${path}`, status: 200, risk });
-            return;
-          }
-        } catch { /* CORS or unreachable */ }
-      }
-    })
-  );
-
-  return { detectedTechs, serverBanner, poweredBy, exposedPaths };
-}
-
-// ── Full WebFox Recon Orchestrator ─────────────────────────────────────────────
 export async function runWebFoxRecon(targetUrlOrDomain: string): Promise<WebFoxReconResult> {
   const cleanDomain = targetUrlOrDomain
     .replace(/^https?:\/\//i, '')
@@ -517,43 +385,65 @@ export async function runWebFoxRecon(targetUrlOrDomain: string): Promise<WebFoxR
     .toLowerCase();
 
   const start = Date.now();
+  const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
-  const [dnsRecords, subdomains, whois, techStack, tlsCert] = await Promise.all([
+  // 1. LIVENESS CHECK FIRST
+  let liveness: LivenessData | undefined;
+  try {
+    const liveRes = await fetch(`${backendBase}/api/webfox/liveness?url=${encodeURIComponent(cleanDomain)}`, { signal: AbortSignal.timeout(6000) });
+    if (liveRes.ok) liveness = await liveRes.json();
+  } catch {
+    liveness = { isAlive: false, error: 'Network Error' } as any;
+  }
+
+  // Set up parallel tasks
+  const promises: Promise<any>[] = [
     resolveDnsRecords(cleanDomain),
     discoverSubdomains(cleanDomain),
     lookupWhois(cleanDomain),
-    detectTechStack(cleanDomain),
-    fetch(`/api/webfox/tls?host=${encodeURIComponent(cleanDomain)}`).then(r => r.ok ? r.json() : undefined).catch(() => undefined),
-  ]);
+    fetch(`${backendBase}/api/webfox/tls?host=${encodeURIComponent(cleanDomain)}`).then((r: Response) => r.ok ? r.json() : undefined).catch(() => undefined),
+  ];
+
+  let techStackPromise: Promise<TechStackResult | undefined> = Promise.resolve(undefined);
+  let portsPromise: Promise<Record<number, 'open' | 'closed' | 'timeout'> | undefined> = Promise.resolve(undefined);
+
+  // 2. RUN HEAVY SCANS ONLY IF ALIVE
+  if (liveness?.isAlive) {
+    techStackPromise = fetch(`${backendBase}/api/webfox/fingerprint?url=${encodeURIComponent(cleanDomain)}`, { signal: AbortSignal.timeout(8000) })
+      .then((r: Response) => r.ok ? r.json() : undefined)
+      .then(data => {
+        if (!data) return undefined;
+        return {
+          detectedTechs: data.technologies || [],
+          serverBanner: liveness?.headers?.['server'] || 'Unknown',
+          poweredBy: liveness?.headers?.['x-powered-by'] || 'Unknown',
+          exposedPaths: [], // Excluded from fingerprint for speed
+          metadata: data.metadata
+        };
+      })
+      .catch(() => undefined);
+    
+    portsPromise = fetch(`${backendBase}/api/webfox/ports?host=${encodeURIComponent(cleanDomain)}`, { signal: AbortSignal.timeout(8000) })
+      .then((r: Response) => r.ok ? r.json() : undefined)
+      .then(data => data?.ports)
+      .catch(() => undefined);
+  }
+
+  promises.push(techStackPromise, portsPromise);
+
+  const [dnsRecords, subdomains, whois, tlsCert, techStack, ports] = await Promise.all(promises);
 
   const latencyMs = Date.now() - start;
 
   // Extract primary A record IP
-  const aRecord = dnsRecords.find(r => r.type === 'A');
+  const aRecord = (dnsRecords as any[]).find((r: any) => r.type === 'A');
   const ip = aRecord?.value;
 
-  // Default security headers audit (no actual headers available from browser for the target)
-  const defaultHeaderAudit = auditSecurityHeaders({});
+  // Analyze security headers obtained from liveness
+  const defaultHeaderAudit = auditSecurityHeaders(liveness?.headers || {});
     
-  // 6. WebFox Crawl (Robots, Sitemap, JS Analysis)
+  // Crawl JS secrets/robots
   const crawl = await runWebFoxCrawl(cleanDomain);
-
-  // 7. Shodan InternetDB lookup for IP
-  let openPorts: number[] = [];
-  let cves: string[] = [];
-  let cpes: string[] = [];
-  if (ip) {
-    try {
-      const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-      const shodanRes = await fetch(`${backendBase}/api/webfox/proxy?url=${encodeURIComponent(`https://internetdb.shodan.io/${ip}`)}`, { signal: AbortSignal.timeout(6000) });
-      if (shodanRes.ok) {
-        const shodanData = await shodanRes.json();
-        if (Array.isArray(shodanData.ports)) openPorts = shodanData.ports;
-        if (Array.isArray(shodanData.vulns)) cves = shodanData.vulns;
-        if (Array.isArray(shodanData.cpes)) cpes = shodanData.cpes;
-      }
-    } catch { /* Ignore if it fails */ }
-  }
 
   let sslCert: SslCertInfo | undefined;
   if (tlsCert && !tlsCert.error) {
@@ -577,14 +467,14 @@ export async function runWebFoxRecon(targetUrlOrDomain: string): Promise<WebFoxR
     sslCert,
     securityHeaders: defaultHeaderAudit.checks,
     headerSecurityScore: defaultHeaderAudit.score,
-    wafDetected: defaultHeaderAudit.waf || techStack.detectedTechs.find(t => t.includes('Cloudflare') || t.includes('WAF')),
-    serverBanner: techStack.serverBanner !== 'Unknown' ? techStack.serverBanner : undefined,
+    wafDetected: defaultHeaderAudit.waf || techStack?.detectedTechs.find((t: string) => t.includes('Cloudflare') || t.includes('WAF')),
+    serverBanner: techStack?.serverBanner !== 'Unknown' ? techStack?.serverBanner : undefined,
     latencyMs,
     techStack,
     crawl,
-    openPorts: openPorts.length > 0 ? openPorts : undefined,
-    cves: cves.length > 0 ? cves : undefined,
-    cpes: cpes.length > 0 ? cpes : undefined
+    openPorts: ports ? Object.entries(ports).filter(([_, status]) => status === 'open').map(([p]) => Number(p)) : undefined,
+    liveness,
+    ports,
   };
 }
 

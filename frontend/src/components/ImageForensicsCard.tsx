@@ -499,6 +499,27 @@ export const ImageForensicsCard: React.FC<ImageForensicsCardProps> = ({ report, 
             </div>
           )}
 
+          {/* Extracted Text (OCR) */}
+          {ocrVision.extractedText && (
+            <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '16px 20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
+                  Extracted Text (OCR)
+                </span>
+                <button 
+                  onClick={() => handleCopy(ocrVision.extractedText || '', 'ocr-text')}
+                  style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', cursor: 'pointer', color: copiedKey === 'ocr-text' ? 'var(--brand-amber)' : '#f1f5f9', display: 'flex', padding: '4px 8px', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 600 }}
+                >
+                  {copiedKey === 'ocr-text' ? <Check size={14} /> : <Copy size={14} />}
+                  {copiedKey === 'ocr-text' ? 'COPIED' : 'COPY TEXT'}
+                </button>
+              </div>
+              <pre className="custom-scrollbar" style={{ fontSize: '12px', color: '#e2e8f0', fontFamily: 'var(--font-mono)', whiteSpace: 'pre-wrap', maxHeight: '200px', overflowY: 'auto', background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '6px', margin: 0, userSelect: 'text' }}>
+                {ocrVision.extractedText}
+              </pre>
+            </div>
+          )}
+
           {/* Carved IOCs */}
           <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '16px 20px' }}>
             <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', fontFamily: 'var(--font-mono)', marginBottom: '10px' }}>

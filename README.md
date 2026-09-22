@@ -9,9 +9,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-orange.svg)](./LICENSE)
 [![Powered by VirusTotal](https://img.shields.io/badge/Powered%20by-VirusTotal-blue.svg)](https://www.virustotal.com)
 [![Status](https://img.shields.io/badge/Status-Active-brightgreen.svg)](https://threatatlas.luckyverse.tech)
-[![Frontend](https://img.shields.io/badge/Frontend-Vercel-black.svg)](https://vercel.com)
+[![Frontend](https://img.shields.io/badge/Frontend-Local-black.svg)](https://react.dev)
 [![Backend](https://img.shields.io/badge/Backend-Local-46E3B7.svg)](https://nodejs.org)
-**[🌐 Live Demo → threatatlas.luckyverse.tech](https://threatatlas.luckyverse.tech)**
+**[🌐 Local Server → http://localhost:3002](http://localhost:3002)**
 
 </div>
 
@@ -97,7 +97,6 @@ ThreatAtlas/
 │   │   ├── utils/              # PDF export, input sanitization
 │   │   └── workers/            # Steganography web worker
 │   ├── public/                 # Static assets, favicon, robots.txt
-│   ├── vercel.json             # SPA routing for Vercel
 │   └── .env.example            # Required env vars
 │
 └── backend/                    # Node.js + Express + TypeScript
@@ -155,7 +154,6 @@ VITE_API_BASE_URL=http://localhost:3001
 **Backend** — create `backend/.env`:
 ```env
 PORT=3001
-ALLOWED_ORIGINS=http://localhost:3002,https://your-app.vercel.app
 VT_API_KEY=your_virustotal_api_key
 ATLAS_API_KEY=your_atlas_api_key   # optional
 ```
@@ -179,29 +177,13 @@ Open **http://localhost:3002** in your browser.
 
 ## 🌍 Deployment
 
-ThreatAtlas is intentionally designed as a **hybrid setup**: Frontend deployed to the cloud (Vercel) and Backend running securely on your **Local Machine**. This keeps your API keys entirely on your own hardware while enjoying a fast, globally distributed frontend.
+ThreatAtlas is designed to run securely on your **Local Machine**. This keeps your API keys entirely on your own hardware.
 
-### Frontend (Vercel)
+### Running Locally
 
-1. Create a New Project on Vercel and connect your repository.
-2. **Root Directory:** `frontend`
-3. **Framework:** Vite
-4. Add Environment Variables:
-
-| Key | Value |
-|-----|-------|
-| `VITE_VT_API_KEY` | Your VirusTotal API key |
-| `VITE_API_BASE_URL` | `http://localhost:3001` |
-
-*(Note: Never place your `ATLAS_API_KEY` in Vercel. It belongs only in your local backend!)*
-
-### Backend (Local Machine)
-
-The backend is designed to run locally, securely proxying requests to VirusTotal and Atlas AI. When you visit your Vercel URL, your browser will transparently route API calls to your local backend.
-
-1. Navigate to the `backend` folder.
-2. Ensure your `.env` is configured (see Configure Environment above).
-3. **Start:** `npm run dev` or `npm start`
+1. Navigate to the project root.
+2. Start both frontend and backend simultaneously: `npm run dev`
+3. Access the frontend at `http://localhost:3002`.
 
 ---
 
@@ -211,7 +193,6 @@ See [SECURITY.md](./SECURITY.md) for the full vulnerability disclosure policy.
 
 **Key practices:**
 - All API keys stored in environment variables — never hardcoded
-- CORS restricted to allowed origins via `ALLOWED_ORIGINS` env var
 - Input sanitization via `sanitizeInput()` / `sanitizeUrl()` before all API calls
 - HTML output escaping throughout rendering pipeline
 - `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options` headers

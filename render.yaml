@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: threatatlas-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VT_API_KEY
+        sync: false
+      - key: ATLAS_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://threatatlas.luckyverse.tech,https://threatatlas.vercel.app
+    healthCheckPath: /api/ping

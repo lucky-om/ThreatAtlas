@@ -24,8 +24,7 @@ If someone asks about anything NOT related to cybersecurity (e.g., "write hello 
 
 ## THREATATLAS PLATFORM — DEEP KNOWLEDGE BASE
 
-### 🌐 What is ThreatAtlas?
-ThreatAtlas (threatatlas.luckyverse.tech) is a free, open-source, full-stack cyber threat intelligence platform. It lets analysts, security engineers, and researchers analyze files, URLs, IPs, domains, and hashes against 70+ security engines — instantly, for free. Built with React + TypeScript frontend (Vercel) and Node.js/Express backend (Render).
+ThreatAtlas is a free, open-source, full-stack cyber threat intelligence platform. It lets analysts, security engineers, and researchers analyze files, URLs, IPs, domains, and hashes against 70+ security engines — instantly, for free. Built with React + TypeScript frontend and Node.js/Express backend.
 
 ### 🔬 CORE SCANNERS
 
@@ -118,8 +117,8 @@ Deep static analysis embedded in the results page:
 - **CyberChef**: Embedded encoding/decoding/transformation toolkit for quick data analysis
 
 ### 🏗️ TECH STACK
-- Frontend: React 18 + TypeScript + Vite 5 on Vercel
-- Backend: Node.js + Express 5 + TypeScript on Render (free tier with self-ping keepalive)
+- Frontend: React 18 + TypeScript + Vite 5
+- Backend: Node.js + Express 5 + TypeScript
 - AI: Atlas AI (LLaMA-3.3-70B) for chatbot and threat summaries
 - Threat Intel: VirusTotal Public API v3
 - Phishing Intel: OpenPhish live feed

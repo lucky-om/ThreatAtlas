@@ -157,11 +157,16 @@ export const Results: React.FC = () => {
   // Auto-correct active tab when data resolves and confirms scan type
   // (e.g., user arrived with ?tab=BEHAVIOR but it's a URL scan)
   useEffect(() => {
+    const _isUrlScan = Boolean(!isFile && (isUrlRoute || isUrlToken || detected === 'url' || (analysisResult && !analysisResult.hash)));
     if (!isFile && activeTab === 'BEHAVIOR') {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab('DETECTION');
     }
-  }, [isFile, activeTab]);
+    if (_isUrlScan && activeTab === 'DETECTION') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActiveTab('DETAILS');
+    }
+  }, [isFile, isUrlRoute, isUrlToken, detected, analysisResult, activeTab]);
 
   const executeUnifiedScan = useCallback(async (forceFresh = false) => {
     setLoading(true);
@@ -262,11 +267,81 @@ export const Results: React.FC = () => {
         setAnalysisResult(analysisData);
         setCachedItem(target, analysisData);
 
-        if (analysisData.hash || (!analysisData.url && analysisData.fileName)) {
-          const fallbackHash = analysisData.hash || target;
+        if (analysisData.hash) {
+          try {
+            setLiveStage('Fetching full VT file report...');
+            // Fetch the comprehensive file report which includes TRiD, Magic, Signature, etc.
+            const apiKey = import.meta.env.VITE_VT_API_KEY || '';
+            const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+            const [fullFileData, behaviorRes] = await Promise.allSettled([
+              lookupHash(analysisData.hash),
+              fetch(`${backendBase}/api/vt/proxy?path=${encodeURIComponent(`/files/${analysisData.hash}/behaviours?limit=5`)}`, {
+                headers: apiKey ? { 'x-apikey': apiKey } : {}
+              }).then(r => r.ok ? r.json() : null)
+            ]);
+
+            if (fullFileData.status === 'fulfilled') {
+              setFileResult(fullFileData.value);
+              setCachedItem(analysisData.hash, fullFileData.value);
+              if (behaviorRes.status === 'fulfilled' && behaviorRes.value) setBehaviorData(behaviorRes.value);
+
+              addScanHistoryItem({
+                id: fullFileData.value.id || analysisData.hash,
+                target: analysisData.hash,
+                type: 'file',
+                name: fullFileData.value.name || fullFileData.value.names?.[0] || 'Sample File',
+                hash: fullFileData.value.sha256,
+                verdict: fullFileData.value.verdict || (fullFileData.value.stats?.malicious > 0 ? 'malicious' : 'clean'),
+                threatScore: fullFileData.value.stats?.malicious || 0,
+                maliciousCount: fullFileData.value.stats?.malicious || 0,
+                totalEngines: fullFileData.value.engines?.length || 70,
+                fileSize: fullFileData.value.size
+              });
+            } else {
+              throw new Error("getFileReport failed");
+            }
+          } catch {
+            // Fallback if the file report is not immediately available on VT backend
+            const fallbackFile: NormalizedFile = {
+              id: analysisData.hash,
+              sha256: analysisData.hash,
+              sha1: '',
+              md5: '',
+              name: analysisData.fileName || 'Sample File',
+              names: analysisData.fileName ? [analysisData.fileName] : ['Sample File'],
+              size: analysisData.fileSize || 0,
+              type: analysisData.fileName ? analysisData.fileName.split('.').pop()?.toUpperCase() || 'File' : 'File',
+              mimeType: '',
+              firstSeen: analysisData.date || Math.floor(Date.now() / 1000),
+              lastSeen: analysisData.date || Math.floor(Date.now() / 1000),
+              timesSubmitted: 1,
+              verdict: analysisData.verdict,
+              stats: analysisData.stats,
+              tags: [],
+              engines: analysisData.engines || [],
+              comments: analysisData.comments || []
+            };
+            setFileResult(fallbackFile);
+            setCachedItem(analysisData.hash, fallbackFile);
+            
+            addScanHistoryItem({
+              id: analysisData.hash,
+              target: analysisData.hash,
+              type: 'file',
+              name: fallbackFile.name,
+              hash: fallbackFile.sha256,
+              verdict: fallbackFile.verdict,
+              threatScore: fallbackFile.stats.malicious || 0,
+              maliciousCount: fallbackFile.stats.malicious || 0,
+              totalEngines: fallbackFile.engines.length || 70,
+              fileSize: fallbackFile.size
+            });
+          }
+        } else if (!analysisData.url && analysisData.fileName) {
+          // If it's a file but we only have a mock token (e.g. >32MB bypass)
           const fallbackFile: NormalizedFile = {
-            id: fallbackHash,
-            sha256: fallbackHash,
+            id: target,
+            sha256: target,
             sha1: '',
             md5: '',
             name: analysisData.fileName || 'Sample File',
@@ -280,42 +355,11 @@ export const Results: React.FC = () => {
             verdict: analysisData.verdict,
             stats: analysisData.stats,
             tags: [],
-            engines: analysisData.engines,
-            extended: analysisData.extended
+            engines: analysisData.engines || [],
+            comments: analysisData.comments || []
           };
           setFileResult(fallbackFile);
-
-          if (analysisData.hash) {
-            try {
-              const apiKey = import.meta.env.VITE_VT_API_KEY || '';
-              const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-              const [fullFileData, behaviorRes] = await Promise.allSettled([
-                lookupHash(analysisData.hash),
-                fetch(`${backendBase}/api/vt/proxy?path=${encodeURIComponent(`/files/${analysisData.hash}/behaviours?limit=5`)}`, {
-                  headers: apiKey ? { 'x-apikey': apiKey } : {}
-                }).then(r => r.ok ? r.json() : null)
-              ]);
-
-              if (fullFileData.status === 'fulfilled') {
-                setFileResult(fullFileData.value);
-                setCachedItem(analysisData.hash, fullFileData.value);
-                if (behaviorRes.status === 'fulfilled' && behaviorRes.value) setBehaviorData(behaviorRes.value);
-
-                addScanHistoryItem({
-                  id: fullFileData.value.id || analysisData.hash,
-                  target: analysisData.hash,
-                  type: 'file',
-                  name: fullFileData.value.name || fullFileData.value.names?.[0] || 'Sample File',
-                  hash: fullFileData.value.sha256,
-                  verdict: fullFileData.value.verdict || (fullFileData.value.stats?.malicious > 0 ? 'malicious' : 'clean'),
-                  threatScore: fullFileData.value.stats?.malicious || 0,
-                  maliciousCount: fullFileData.value.stats?.malicious || 0,
-                  totalEngines: fullFileData.value.engines?.length || 70,
-                  fileSize: fullFileData.value.size
-                });
-              }
-            } catch (_) { /* history write failed */ }
-          }
+          setCachedItem(target, fallbackFile);
         } else {
           addScanHistoryItem({
             id: analysisData.id || target,
@@ -454,7 +498,6 @@ export const Results: React.FC = () => {
   );
 
   if (loading && !hasAnyData) {
-    const isAnalysis = rawTarget.startsWith('u-') || rawTarget.includes(':') || (rawTarget.length >= 44 && !isValidHash(rawTarget));
     // Detect scan type for loader color BEFORE targetCategory is computed below
     const loaderType: 'file' | 'url' | 'domain' | 'ip' = (() => {
       if (isValidHash(rawTarget) || rawTarget.startsWith('u-')) return rawTarget.startsWith('u-') ? 'url' : 'file';
@@ -465,8 +508,7 @@ export const Results: React.FC = () => {
     })();
 
     const getEstimatedTime = () => {
-      if (!isAnalysis) return '~3s';
-      if (loaderType === 'ip') return '~2s';
+      if (loaderType === 'ip') return '~4s';
       if (loaderType === 'domain') return '~4s';
       if (loaderType === 'url') return '~12s';
       
@@ -1256,7 +1298,9 @@ export const Results: React.FC = () => {
           scrollbarWidth: 'none',
         }}>
           {/* Context-sensitive tabs: BEHAVIOR only for file scans */}
-          {(['DETECTION', 'DETAILS', ...(isFile ? ['BEHAVIOR'] : []), 'RELATIONS', 'COMMUNITY', 'SUMMARY'] as Tab[]).map((t) => {
+          {(['DETECTION', 'DETAILS', ...(isFile ? ['BEHAVIOR'] : []), 'RELATIONS', 'COMMUNITY', 'SUMMARY'] as Tab[])
+            .filter(t => !(targetCategory === 'url' && t === 'DETECTION'))
+            .map((t) => {
             const isActive = activeTab === t;
             return (
               <button

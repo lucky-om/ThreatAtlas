@@ -417,6 +417,20 @@ export async function generatePdfThreatReport(options: ExportReportOptions): Pro
       ['Categorization / Sector:', categories],
       ['Last Security Scan:', formatRelativeTime(domainData.lastSeen)]
     ]);
+
+    if ((domainData as any).extended?.whois) {
+      renderSectionHeader('WHOIS Registry Record', 'WHOIS');
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(...THEME.textDim);
+      const whoisLines = cleanPdfMultilineText((domainData as any).extended.whois).split('\n');
+      whoisLines.forEach(line => {
+        checkPageBreak(5);
+        doc.text(line.slice(0, 110), margin + 4, cursorY);
+        cursorY += 3.5;
+      });
+      cursorY += 5;
+    }
   } else {
     // IP Address
     const ipData = threatData as NormalizedIp;
@@ -434,6 +448,20 @@ export async function generatePdfThreatReport(options: ExportReportOptions): Pro
       ['IP Threat Score Index:', `${malicious} malicious detections`],
       ['Last Telemetry Resolution:', formatRelativeTime(ipData.lastSeen)]
     ]);
+    
+    if ((ipData as any).extended?.whois) {
+      renderSectionHeader('WHOIS Registry Record', 'WHOIS');
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(...THEME.textDim);
+      const whoisLines = cleanPdfMultilineText((ipData as any).extended.whois).split('\n');
+      whoisLines.forEach(line => {
+        checkPageBreak(5);
+        doc.text(line.slice(0, 110), margin + 4, cursorY);
+        cursorY += 3.5;
+      });
+      cursorY += 5;
+    }
   }
 
   // ── 3. ATLAS AI THREAT ASSESSMENT & VERDICT ───────────────────────────────
@@ -475,7 +503,10 @@ export async function generatePdfThreatReport(options: ExportReportOptions): Pro
       ['Steganography Risk Index:', `${imageForensics.stego?.riskScore || 0}/100 (${String(imageForensics.stego?.riskLevel || 'clean').toUpperCase()})`],
       ['Stego Artifact Anomalies:', signalsText],
       ['Camera Hardware / EXIF:', imageForensics.cameraExif?.make ? `${imageForensics.cameraExif.make} ${imageForensics.cameraExif.model || ''}` : 'Metadata Stripped / Anonymized'],
-      ['Perceptual Hashes (dHash/pHash):', `dHash: ${imageForensics.hashes?.dhash || 'N/A'} | pHash: ${imageForensics.hashes?.phash || 'N/A'}`]
+      ['Perceptual Hashes (dHash/pHash):', `dHash: ${imageForensics.hashes?.dhash || 'N/A'} | pHash: ${imageForensics.hashes?.phash || 'N/A'}`],
+      ['Document Classification:', imageForensics.ocrVision?.documentType || 'Unknown / Not a standard document'],
+      ['Extracted Text (OCR):', imageForensics.ocrVision?.extractedText || 'No text extracted from image'],
+      ['Carved IOCs (IP/Email/Hash):', `IPs: ${imageForensics.ocrVision?.detectedIocs?.ips?.length || 0} | Emails: ${imageForensics.ocrVision?.detectedIocs?.emails?.length || 0} | Hashes: ${imageForensics.ocrVision?.detectedIocs?.hashes?.length || 0}`]
     ]);
   }
 
@@ -573,15 +604,70 @@ export async function generatePdfThreatReport(options: ExportReportOptions): Pro
   }
 
   // H. WebFox Recon & Security Headers (if URL/Domain)
-  if (webfoxResult && webfoxResult.headers) {
-    renderSectionHeader('WebFox Recon: Security Headers & Transport Security', 'WEBFOX');
-    renderCardKeyValue([
-      ['Strict-Transport-Security (HSTS):', webfoxResult.headers.hsts || 'Not Enabled'],
-      ['Content-Security-Policy (CSP):', webfoxResult.headers.csp ? 'Configured' : 'Missing / Insecure'],
-      ['X-Frame-Options (Clickjacking):', webfoxResult.headers.xFrameOptions || 'Missing'],
-      ['X-Content-Type-Options:', webfoxResult.headers.xContentTypeOptions || 'Missing'],
-      ['Server Software Telemetry:', webfoxResult.server || 'Protected / Hidden']
-    ]);
+  if (webfoxResult) {
+    if (webfoxResult.headers) {
+      renderSectionHeader('WebFox Recon: Security Headers & Transport Security', 'WEBFOX');
+      renderCardKeyValue([
+        ['Strict-Transport-Security (HSTS):', webfoxResult.headers.hsts || 'Not Enabled'],
+        ['Content-Security-Policy (CSP):', webfoxResult.headers.csp ? 'Configured' : 'Missing / Insecure'],
+        ['X-Frame-Options (Clickjacking):', webfoxResult.headers.xFrameOptions || 'Missing'],
+        ['X-Content-Type-Options:', webfoxResult.headers.xContentTypeOptions || 'Missing'],
+        ['Server Software Telemetry:', webfoxResult.server || 'Protected / Hidden']
+      ]);
+    }
+    
+    if (Array.isArray(webfoxResult.dnsRecords) && webfoxResult.dnsRecords.length > 0) {
+      renderSectionHeader('DNS Record Resolution', 'DNS');
+      const dnsGrouped: Record<string, string[]> = {};
+      webfoxResult.dnsRecords.forEach((r: any) => {
+        if (!dnsGrouped[r.type]) dnsGrouped[r.type] = [];
+        if (r.value) dnsGrouped[r.type].push(r.value);
+      });
+      const dnsRows: [string, string][] = [];
+      Object.entries(dnsGrouped).forEach(([type, records]) => {
+        dnsRows.push([`${type} Record:`, records.join(' | ')]);
+      });
+      if (dnsRows.length > 0) renderCardKeyValue(dnsRows);
+    }
+    
+    if (Array.isArray(webfoxResult.ports) && webfoxResult.ports.length > 0) {
+      renderSectionHeader('Discovered Open Ports & Services', 'PORTS');
+      const portsRow = webfoxResult.ports.map((p: any) => typeof p === 'object' ? `${p.port} (${p.service})` : String(p)).join(' | ');
+      renderCardKeyValue([['Exposed Ports:', portsRow]]);
+    }
+    
+    if (Array.isArray(webfoxResult.subdomains) && webfoxResult.subdomains.length > 0) {
+      renderSectionHeader('Associated Subdomains Discovered', 'SUBDOMAINS');
+      const subsRow = webfoxResult.subdomains.slice(0, 50).join(' | ') + (webfoxResult.subdomains.length > 50 ? ' ... (+more)' : '');
+      renderCardKeyValue([[`Total Subdomains (${webfoxResult.subdomains.length}):`, subsRow]]);
+    }
+    
+    if (webfoxResult.crawl) {
+      if (typeof webfoxResult.crawl.robots === 'string' || (Array.isArray(webfoxResult.crawl.sitemapUrls) && webfoxResult.crawl.sitemapUrls.length > 0)) {
+        renderSectionHeader('Spider / Crawler Discoveries', 'SPIDER');
+        renderCardKeyValue([
+          ['Sitemap URLs Found:', webfoxResult.crawl.sitemapUrls?.length ? `${webfoxResult.crawl.sitemapUrls.length} links discovered in sitemap.xml` : 'None'],
+          ['Robots.txt Content:', webfoxResult.crawl.robots ? 'Discovered (See raw content)' : 'Not Found']
+        ]);
+        
+        if (typeof webfoxResult.crawl.robots === 'string') {
+          doc.setFont('courier', 'normal');
+          doc.setFontSize(7);
+          doc.setTextColor(...THEME.textDim);
+          const lines = cleanPdfMultilineText(webfoxResult.crawl.robots).split('\n').slice(0, 30);
+          lines.forEach(line => {
+            checkPageBreak(4);
+            doc.text(line.slice(0, 110), margin + 4, cursorY);
+            cursorY += 3.5;
+          });
+          if (webfoxResult.crawl.robots.split('\n').length > 30) {
+             doc.text('... (Truncated for PDF)', margin + 4, cursorY);
+             cursorY += 4;
+          }
+          cursorY += 5;
+        }
+      }
+    }
   }
 
   // I. Certificate Inspector
@@ -596,7 +682,8 @@ export async function generatePdfThreatReport(options: ExportReportOptions): Pro
   }
 
   // ── 5. SECURITY VENDORS DETECTIONS TABLE (Web UI Styled) ──────────────────
-  renderSectionHeader(`Security Vendors Analysis Breakdown (${engineList.length || '70+'} Engines)`, 'ENGINES');
+  if (targetType !== 'url') {
+    renderSectionHeader(`Security Vendors Analysis Breakdown (${engineList.length || '70+'} Engines)`, 'ENGINES');
 
   const maliciousEngines = engineList.filter((e: any) => e.detected);
   const cleanEngines = engineList.filter((e: any) => !e.detected);
@@ -649,6 +736,7 @@ export async function generatePdfThreatReport(options: ExportReportOptions): Pro
 
     cursorY += 5.5;
   });
+  }
 
   // ── 6. ALL PAGES FOOTER (Confidential SOC Warning & Page Numbers) ──────────
   const totalPages = doc.getNumberOfPages();

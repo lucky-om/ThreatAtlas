@@ -113,21 +113,14 @@ The React frontend implements the following:
 ### Backend Security
 
 **CORS**
-- CORS is locked to an explicit allowlist via the `ALLOWED_ORIGINS` environment variable
-- Open `*` CORS is **not** used in production
-- Only configured origins (your Vercel domain, custom domain) are permitted
+- CORS is natively unrestricted as this tool is designed for pure local environments.
 
 ```typescript
 // backend/src/server.ts
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3002')
-  .split(',').map(o => o.trim());
-
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) callback(null, true);
-    else callback(new Error(`CORS: origin ${origin} not allowed`));
-  },
-  credentials: true,
+  origin: '*', // Allow absolutely anything
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'x-apikey', 'Authorization', 'Access-Control-Allow-Private-Network']
 }));
 ```
 
@@ -165,26 +158,15 @@ Dependencies are kept minimal and reviewed regularly. The project avoids transit
 | Groq API key in browser env var (`VITE_GROQ_API_KEY`) | ⚠️ Medium | By design | The chatbot is an optional feature. If concerned, proxy Groq calls through the backend instead. |
 | `ip-api.com` free tier rate limits | ℹ️ Info | By design | Our backend proxy handles rate limits gracefully; results are cached client-side for 10 min. |
 | File upload stored on server briefly | ℹ️ Low | Mitigated | Files are deleted immediately after processing in both success and error paths. |
-| Self-ping in production exposes hostname | ℹ️ Info | By design | `RENDER_EXTERNAL_HOSTNAME` is used only for the internal keepalive ping. |
 
 ---
 
 ## Security Best Practices for Self-Hosters
 
-If you deploy your own instance, apply these additional measures:
-
-### Vercel (Frontend)
-- Store API keys as [Environment Variables](https://vercel.com/docs/environment-variables) — never commit `.env` files
-- Enable Vercel's [DDoS protection](https://vercel.com/docs/security) (enabled by default)
-- Consider wrapping VirusTotal and Groq calls through your backend to avoid exposing keys client-side
-
-### Render (Backend)
-- Set `ALLOWED_ORIGINS` to only your exact frontend domain(s)
-- Never commit `.env` to version control (it's in `.gitignore`)
-- Enable [Render's DDoS shield](https://render.com/docs/ddos-protection) (available on paid plans)
+If you deploy your own instance locally, apply these additional measures:
 
 ### General
-- Use TLS 1.2+ only
+- Use TLS 1.2+ if exposed externally
 - Keep Node.js runtime updated to latest LTS
 - Rotate API keys regularly
 - Monitor your VirusTotal API quota for unexpected spikes (could indicate key leakage)

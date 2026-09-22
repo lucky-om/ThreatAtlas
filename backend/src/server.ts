@@ -9,14 +9,30 @@ import exifr from 'exifr';
 import ffmpeg from 'fluent-ffmpeg';
 import fs from 'fs';
 import crypto from 'crypto';
+import net from 'net';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
 
+// Parse allowed origins from ALLOWED_ORIGINS env var (comma-separated)
+// Falls back to * in development so local devs don't need to configure anything
+const allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
+const allowedOrigins = allowedOriginsEnv
+  ? allowedOriginsEnv.split(',').map(o => o.trim()).filter(Boolean)
+  : [];
+
 app.use(cors({
-  origin: '*', // Allow absolutely anything
+  origin: allowedOrigins.length > 0
+    ? (origin, callback) => {
+        // Allow requests with no origin (curl, Render health checks, Postman)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        callback(new Error(`CORS: Origin ${origin} not allowed`));
+      }
+    : '*', // No ALLOWED_ORIGINS set → allow everything (local dev mode)
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'x-apikey', 'Authorization', 'Access-Control-Allow-Private-Network']
 }));
@@ -75,16 +91,19 @@ app.get('/api/webfox/dns', async (req, res) => {
     const results: any = {};
     const recordTypes = ['A', 'AAAA', 'MX', 'TXT', 'NS', 'SOA'];
     
-    for (const type of recordTypes) {
-      try {
-        const records = await dns.resolve(domain, type as any);
-        if (records && records.length > 0) {
-          results[type] = records;
+    // Using Google DNS-over-HTTPS (DoH) for reliable lookups
+    await Promise.allSettled(
+      recordTypes.map(async (type) => {
+        const response = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${type}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.Status === 0 && data.Answer) {
+            results[type] = data.Answer.map((ans: any) => ans.data);
+          }
         }
-      } catch (e) {
-        // Ignore resolution errors for specific record types
-      }
-    }
+      })
+    );
+    
     res.json(results);
   } catch (error: any) {
     res.status(500).json({ error: 'DNS resolution failed', details: error.message });
@@ -139,9 +158,125 @@ app.get('/api/ipgeo', async (req, res) => {
     const data = await response.json();
     res.json(data);
   } catch (error: any) {
-    res.status(500).json({ error: 'IP Geolocation failed', details: error.message });
+    res.status(500).json({ error: 'Geolocation failed', details: error.message });
   }
 });
+
+// --- NEW FORENSIC MODULES ---
+
+app.get('/api/webfox/liveness', async (req, res) => {
+  const { url } = req.query;
+  if (!url || typeof url !== 'string') return res.status(400).json({ error: 'URL required' });
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000); // 6s timeout
+    const target = url.startsWith('http') ? url : `https://${url}`;
+    const start = Date.now();
+    const response = await fetch(target, { signal: controller.signal, redirect: 'follow' });
+    clearTimeout(timeout);
+    
+    const headers: Record<string, string> = {};
+    response.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
+    
+    res.json({
+      isAlive: true,
+      statusCode: response.status,
+      statusText: response.statusText,
+      responseTimeMs: Date.now() - start,
+      finalUrl: response.url,
+      headers
+    });
+  } catch (error: any) {
+    res.json({ isAlive: false, error: error.message });
+  }
+});
+
+app.get('/api/webfox/fingerprint', async (req, res) => {
+  const { url } = req.query;
+  if (!url || typeof url !== 'string') return res.status(400).json({ error: 'URL required' });
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+    const target = url.startsWith('http') ? url : `https://${url}`;
+    const response = await fetch(target, { signal: controller.signal, redirect: 'follow' });
+    clearTimeout(timeout);
+    
+    const html = await response.text();
+    
+    const technologies: string[] = [];
+    if (html.includes('content="WordPress') || html.includes('/wp-content/')) technologies.push('WordPress');
+    if (html.includes('id="__NEXT_DATA__"')) technologies.push('Next.js');
+    if (html.includes('data-reactroot') || html.includes('react-dom')) technologies.push('React');
+    if (html.includes('vue.js') || html.includes('data-v-')) technologies.push('Vue.js');
+    if (html.includes('Shopify.shop')) technologies.push('Shopify');
+    if (html.includes('angular.js') || html.includes('ng-version')) technologies.push('Angular');
+    if (response.headers.get('server')?.toLowerCase().includes('cloudflare')) technologies.push('Cloudflare');
+    if (response.headers.get('server')?.toLowerCase().includes('nginx')) technologies.push('Nginx');
+    if (response.headers.get('server')?.toLowerCase().includes('apache')) technologies.push('Apache');
+    if (response.headers.get('x-powered-by')?.toLowerCase().includes('express')) technologies.push('Express');
+    if (response.headers.get('x-powered-by')?.toLowerCase().includes('php')) technologies.push('PHP');
+
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["'][^>]*>/i) || html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["'][^>]*>/i);
+    const ogImageMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+
+    res.json({
+      technologies,
+      metadata: {
+        title: titleMatch ? titleMatch[1].trim() : null,
+        description: descMatch ? descMatch[1].trim() : null,
+        ogImage: ogImageMatch ? ogImageMatch[1].trim() : null
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Fingerprint failed', details: error.message });
+  }
+});
+
+app.get('/api/webfox/ports', async (req, res) => {
+  const { host } = req.query;
+  if (!host || typeof host !== 'string') return res.status(400).json({ error: 'Host required' });
+
+  // Limited port scan to common web/service ports for speed
+  const portsToScan = [21, 22, 23, 25, 53, 80, 110, 143, 443, 445, 3306, 3389, 8080, 8443];
+  const results: Record<number, 'open' | 'closed' | 'timeout'> = {};
+
+  const checkPort = (port: number): Promise<void> => {
+    return new Promise((resolve) => {
+      const socket = new net.Socket();
+      socket.setTimeout(2000); // 2s timeout per port
+
+      socket.on('connect', () => {
+        results[port] = 'open';
+        socket.destroy();
+        resolve();
+      });
+
+      socket.on('timeout', () => {
+        results[port] = 'timeout';
+        socket.destroy();
+        resolve();
+      });
+
+      socket.on('error', () => {
+        results[port] = 'closed';
+        socket.destroy();
+        resolve();
+      });
+
+      socket.connect(port, host);
+    });
+  };
+
+  try {
+    await Promise.all(portsToScan.map(p => checkPort(p)));
+    res.json({ ports: results });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Port scan failed', details: error.message });
+  }
+});
+
+// --- EXISTING PROXY ---
 
 // Generic CORS proxy for frontend
 app.all('/api/proxy', async (req, res) => {

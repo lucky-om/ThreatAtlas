@@ -17,7 +17,6 @@ export const WebFoxCard: React.FC<WebFoxCardProps> = ({ recon, loading }) => {
     { id: 'headers',  label: 'HEADERS',  icon: 'security',  count: recon.securityHeaders?.filter(h => h.present).length },
     { id: 'crawl',    label: 'CRAWL',    icon: 'spider',    count: (recon.crawl?.jsSecrets?.length || 0) + (recon.crawl?.jsEndpoints?.length || 0) },
     { id: 'ports',    label: 'PORTS',    icon: 'router',    count: recon.openPorts?.length },
-    { id: 'cves',     label: 'VULNS',    icon: 'bug_report',count: recon.cves?.length },
     { id: 'ssl',      label: 'SSL/TLS',  icon: 'lock',      count: recon.sslCert ? 1 : 0 }
   ];
 
@@ -26,6 +25,7 @@ export const WebFoxCard: React.FC<WebFoxCardProps> = ({ recon, loading }) => {
 
   const headerScore    = recon.headerSecurityScore;
   const scoreColor     = headerScore >= 70 ? 'var(--brand-amber)' : headerScore >= 40 ? '#f59e0b' : '#ff2a5f';
+  const activePorts = recon.ports ? Object.entries(recon.ports).filter(([_, status]) => status === 'open').map(([p]) => Number(p)) : recon.openPorts;
 
   return (
     <div className="glass-card animate-fade-in-up" style={{ padding: '24px', border: '1px solid rgba(245,158,11,0.3)', position: 'relative', overflow: 'hidden' }}>
@@ -108,6 +108,7 @@ export const WebFoxCard: React.FC<WebFoxCardProps> = ({ recon, loading }) => {
           {activeTab === 'overview' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
               {[
+                { label: 'SERVER LIVENESS', value: recon.liveness ? (recon.liveness.isAlive ? `HTTP ${recon.liveness.statusCode}` : 'Offline') : 'Unknown', color: recon.liveness?.isAlive ? 'var(--success)' : '#ff2a5f' },
                 { label: 'PRIMARY IP (A)', value: recon.ip || '—', color: 'var(--primary)' },
                 { label: 'DOMAIN REGISTRAR', value: recon.whois?.registrar || 'Not Disclosed', color: 'var(--on-surface)' },
                 { label: 'DOMAIN AGE', value: recon.whois?.domainAgeDays ? `${recon.whois.domainAgeDays}d old` : 'Unknown', color: (recon.whois?.domainAgeDays ?? 999) < 30 ? '#ff003c' : 'var(--brand-amber)' },
@@ -115,8 +116,7 @@ export const WebFoxCard: React.FC<WebFoxCardProps> = ({ recon, loading }) => {
                 { label: 'HEADER SECURITY', value: `${headerScore}%`, color: scoreColor },
                 { label: 'SUBDOMAINS FOUND', value: `${recon.subdomains?.length || 0} live`, color: 'var(--on-surface)' },
                 { label: 'SSL CERTIFICATE', value: recon.sslCert ? (recon.sslCert.isValid ? 'Valid' : 'Invalid/Expired') : 'Unknown', color: recon.sslCert?.isValid ? 'var(--success)' : '#ff2a5f' },
-                { label: 'OPEN PORTS', value: recon.openPorts ? `${recon.openPorts.length} open` : 'Unknown', color: recon.openPorts && recon.openPorts.length > 3 ? '#fb923c' : 'var(--on-surface)' },
-                { label: 'VULNERABILITIES', value: recon.cves ? `${recon.cves.length} CVEs` : 'Unknown', color: recon.cves && recon.cves.length > 0 ? '#ff2a5f' : 'var(--success)' },
+                { label: 'OPEN PORTS', value: activePorts ? `${activePorts.length} open` : 'Unknown', color: activePorts && activePorts.length > 3 ? '#fb923c' : 'var(--on-surface)' },
                 { label: 'EXPOSED PATHS', value: exposedCount > 0 ? `${exposedCount} exposed` : 'None', color: exposedCount > 0 ? '#ff2a5f' : 'var(--brand-amber)' },
                 { label: 'RECON LATENCY', value: recon.latencyMs ? `${recon.latencyMs}ms` : '—', color: '#64748b' },
               ].map((item, i) => (
@@ -184,6 +184,19 @@ export const WebFoxCard: React.FC<WebFoxCardProps> = ({ recon, loading }) => {
                 </div>
               </div>
 
+              {/* Extracted Metadata */}
+              {recon.techStack?.metadata && (recon.techStack.metadata.title || recon.techStack.metadata.description) && (
+                <div style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'var(--font-mono)', marginBottom: '8px' }}>PAGE METADATA</div>
+                  {recon.techStack.metadata.title && (
+                    <div style={{ fontSize: '13px', color: 'var(--on-surface)', fontWeight: 600 }}>{recon.techStack.metadata.title}</div>
+                  )}
+                  {recon.techStack.metadata.description && (
+                    <div style={{ fontSize: '12px', color: 'var(--on-surface-variant)', marginTop: '4px' }}>{recon.techStack.metadata.description}</div>
+                  )}
+                </div>
+              )}
+
               {/* Detected Technologies */}
               {recon.techStack && recon.techStack.detectedTechs.length > 0 && (
                 <div>
@@ -237,33 +250,15 @@ export const WebFoxCard: React.FC<WebFoxCardProps> = ({ recon, loading }) => {
           {activeTab === 'ports' && (
             <div>
               <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'var(--font-mono)', marginBottom: '10px' }}>
-                Open ports discovered via Shodan InternetDB
+                Open ports discovered via Active TCP Scan (and Shodan InternetDB)
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {recon.openPorts && recon.openPorts.length > 0 ? recon.openPorts.map((port, i) => (
+                {activePorts && activePorts.length > 0 ? activePorts.map((port, i) => (
                   <span key={i} style={{ padding: '8px 14px', borderRadius: '6px', background: 'rgba(255,107,53,0.1)', border: '1px solid rgba(255,107,53,0.3)', fontFamily: 'var(--font-mono)', fontSize: '13px', color: 'var(--primary)', fontWeight: 700 }}>
                     PORT {port}
                   </span>
                 )) : (
                   <span style={{ color: '#64748b', fontSize: '13px' }}>No open ports reported for this IP.</span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ── VULNS TAB ── */}
-          {activeTab === 'cves' && (
-            <div>
-              <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'var(--font-mono)', marginBottom: '10px' }}>
-                Known vulnerabilities (CVEs) matching the host fingerprint
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px' }}>
-                {recon.cves && recon.cves.length > 0 ? recon.cves.map((cve, i) => (
-                  <a key={i} href={`https://nvd.nist.gov/vuln/detail/${cve}`} target="_blank" rel="noreferrer" style={{ padding: '6px 10px', borderRadius: '6px', background: 'rgba(255,42,95,0.08)', border: '1px solid rgba(255,42,95,0.3)', fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#ff2a5f', fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>
-                    {cve}
-                  </a>
-                )) : (
-                  <span style={{ color: '#64748b', fontSize: '13px' }}>No CVEs found for this infrastructure.</span>
                 )}
               </div>
             </div>
@@ -353,23 +348,29 @@ export const WebFoxCard: React.FC<WebFoxCardProps> = ({ recon, loading }) => {
 
               {/* Robots & Sitemap */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface)', marginBottom: '6px' }}>Robots.txt</div>
                   {recon.crawl.robots.found ? (
-                    <div>
-                      <div style={{ fontSize: '10px', color: '#94a3b8' }}>Disallowed: {recon.crawl.robots.disallowed.length}</div>
-                      {recon.crawl.robots.flagged.length > 0 && (
-                        <div style={{ fontSize: '10px', color: '#ff2a5f', marginTop: '4px' }}>⚠ High Risk: {recon.crawl.robots.flagged.length} paths</div>
-                      )}
+                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                      <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '6px' }}>
+                        Disallowed: {recon.crawl.robots.disallowed.length} 
+                        {recon.crawl.robots.flagged.length > 0 && <span style={{ color: '#ff2a5f', marginLeft: '6px' }}>⚠ High Risk: {recon.crawl.robots.flagged.length} paths</span>}
+                      </div>
+                      <pre className="custom-scrollbar" style={{ flex: 1, maxHeight: '150px', overflowY: 'auto', background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '4px', fontSize: '10px', color: '#e2e8f0', margin: 0, whiteSpace: 'pre-wrap' }}>
+                        {recon.crawl.robots.raw}
+                      </pre>
                     </div>
                   ) : <div style={{ fontSize: '10px', color: '#64748b' }}>Not found</div>}
                 </div>
 
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface)', marginBottom: '6px' }}>Sitemap.xml</div>
                   {recon.crawl.sitemap.found ? (
-                    <div>
-                      <div style={{ fontSize: '10px', color: '#94a3b8' }}>Discovered URLs: {recon.crawl.sitemap.urls.length}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                      <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '6px' }}>Urls Extracted: {recon.crawl.sitemap.urls.length}</div>
+                      <pre className="custom-scrollbar" style={{ flex: 1, maxHeight: '150px', overflowY: 'auto', background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '4px', fontSize: '10px', color: '#e2e8f0', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                        {recon.crawl.sitemap.urls.join('\n')}
+                      </pre>
                     </div>
                   ) : <div style={{ fontSize: '10px', color: '#64748b' }}>Not found</div>}
                 </div>

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronUp } from 'lucide-react';
 
 interface FooterLink { to: string; label: string; highlight?: boolean; }
 interface FooterColumn { heading: string; links: FooterLink[]; }
@@ -47,7 +46,6 @@ const ENGINE_BADGES = [
 ];
 
 export const Footer: React.FC = () => {
-  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
   const year = new Date().getFullYear();
 
   return (
@@ -192,15 +190,7 @@ export const Footer: React.FC = () => {
 
           <div className="vt-footer-actions">
 
-            <motion.button
-              whileHover={{ scale: 1.1, backgroundColor: 'var(--brand-dim)', borderColor: 'var(--brand)', color: 'var(--brand)' }}
-              whileTap={{ scale: 0.9 }}
-              onClick={scrollToTop}
-              className="vt-scroll-top-btn"
-              aria-label="Scroll to top"
-            >
-              <ChevronUp size={15} />
-            </motion.button>
+
           </div>
         </div>
       </div>
