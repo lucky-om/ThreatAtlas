@@ -30,7 +30,7 @@ const ALWAYS_ALLOWED_PATTERNS = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // No origin = server-side requests (Render health checks, curl) — allow
+    // No origin = server-side requests (curl, local dev) — allow
     if (!origin) return callback(null, true);
     // Check exact matches from env var
     if (allowedOrigins.includes(origin)) return callback(null, true);
@@ -60,7 +60,7 @@ const upload = multer({
   limits: { fileSize: 32 * 1024 * 1024 } // 32 MB limit
 });
 
-// --- ROOT ROUTE (Render health check + friendly landing) ---
+// --- ROOT ROUTE (Friendly landing) ---
 app.get('/', (_req, res) => {
   res.json({
     name: 'ThreatAtlas Backend Engine',
@@ -175,7 +175,7 @@ app.post('/api/vt/files', upload.single('file'), async (req, res) => {
   
   if (!apiKey) {
     fs.unlinkSync(req.file.path);
-    return res.status(401).json({ error: 'VirusTotal API key not configured. Set VT_API_KEY in Render environment variables.' });
+    return res.status(401).json({ error: 'VirusTotal API key not configured. Set VT_API_KEY in backend .env file.' });
   }
 
   try {
@@ -210,7 +210,7 @@ app.post('/api/vt/urls', async (req, res) => {
   // Use client key or fall back to server env var
   const apiKey = (req.headers['x-apikey'] as string) || process.env.VT_API_KEY || '';
   if (!apiKey) {
-    return res.status(401).json({ error: 'VirusTotal API key not configured. Set VT_API_KEY in Render environment variables.' });
+    return res.status(401).json({ error: 'VirusTotal API key not configured. Set VT_API_KEY in backend .env file.' });
   }
 
   const { url } = req.body;
@@ -245,7 +245,7 @@ app.get('/api/vt/proxy', async (req, res) => {
   // Use client-provided key or fall back to server env var
   const apiKey = (req.headers['x-apikey'] as string) || process.env.VT_API_KEY || '';
   if (!apiKey) {
-    return res.status(401).json({ error: 'VirusTotal API key not configured. Set VT_API_KEY in Render environment variables.' });
+    return res.status(401).json({ error: 'VirusTotal API key not configured. Set VT_API_KEY in backend .env file.' });
   }
 
   const { path: vtPath } = req.query;
@@ -448,24 +448,4 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 app.listen(port, () => {
   console.log(`[ThreatAtlas] Backend engine listening on port ${port}`);
-
-  // ── Self-Ping Keepalive (prevents Render free-tier spin-down) ────────────────
-  // Pings /api/ping every 14 minutes. Works alongside UptimeRobot as a backup.
-  // Only active in production (RENDER env is set automatically by Render).
-  if (process.env.RENDER) {
-    const SELF_URL = `https://${process.env.RENDER_EXTERNAL_HOSTNAME}/api/ping`;
-    const INTERVAL_MS = 14 * 60 * 1000; // 14 minutes
-
-    setInterval(async () => {
-      try {
-        const res = await fetch(SELF_URL);
-        const data = await res.json() as { status?: string };
-        console.log(`[Keepalive] Self-ping OK — status: ${data?.status ?? 'unknown'}`);
-      } catch (err) {
-        console.warn('[Keepalive] Self-ping failed:', err);
-      }
-    }, INTERVAL_MS);
-
-    console.log(`[Keepalive] Self-ping active → ${SELF_URL} (every 14 min)`);
-  }
 });
