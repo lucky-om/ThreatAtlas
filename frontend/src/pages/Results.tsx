@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { SEO } from '../components/SEO';
@@ -163,7 +163,7 @@ export const Results: React.FC = () => {
     }
   }, [isFile, activeTab]);
 
-  const executeUnifiedScan = async (forceFresh = false) => {
+  const executeUnifiedScan = useCallback(async (forceFresh = false) => {
     setLoading(true);
     setError(null);
     setElapsedSec(0);
@@ -432,12 +432,12 @@ export const Results: React.FC = () => {
       clearInterval(elapsedTimer);
       setLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawTarget]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     executeUnifiedScan(false);
-  }, [rawTarget]);
+  }, [rawTarget, executeUnifiedScan]);
 
   // ── UNIFIED SCAN PROGRESS ORCHESTRATOR ────────────────────────────────────
   // Show orchestrator only while initial data handshake is establishing

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 // ── Built-in YARA Rule Presets (Industry Standard Threat Ruleset) ────────────
 // 28 rules covering: EICAR · Ransomware · APT · RAT · Backdoor · Exploit · Steganography ·
 // PowerShell · Office Macros · Process Injection · Anti-Analysis · UPX · Linux Persistence · DGA
+// eslint-disable-next-line react-refresh/only-export-components
 export const EXAMPLE_YARA_RULES = [
   // ────────────────────────────────────────────────────────────────────────
   // VALIDATION & STANDARD TESTS

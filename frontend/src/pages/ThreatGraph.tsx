@@ -229,11 +229,15 @@ export const ThreatGraph: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (initialQuery) {
-      searchTargetGraph(initialQuery);
-    } else {
-      loadPreset(0);
-    }
+    // Defer the call out of the synchronous effect to avoid cascading renders
+    const id = setTimeout(() => {
+      if (initialQuery) {
+        searchTargetGraph(initialQuery);
+      } else {
+        loadPreset(0);
+      }
+    }, 0);
+    return () => clearTimeout(id);
   }, [initialQuery, searchTargetGraph, loadPreset]);
 
   // ── Physics Simulation Step ───────────────────────────────────────────────
