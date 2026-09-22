@@ -10,8 +10,7 @@
 [![Powered by VirusTotal](https://img.shields.io/badge/Powered%20by-VirusTotal-blue.svg)](https://www.virustotal.com)
 [![Status](https://img.shields.io/badge/Status-Active-brightgreen.svg)](https://threatatlas.luckyverse.tech)
 [![Frontend](https://img.shields.io/badge/Frontend-Vercel-black.svg)](https://vercel.com)
-[![Backend](https://img.shields.io/badge/Backend-Render-46E3B7.svg)](https://render.com)
-
+[![Backend](https://img.shields.io/badge/Backend-Local-46E3B7.svg)](https://nodejs.org)
 **[🌐 Live Demo → threatatlas.luckyverse.tech](https://threatatlas.luckyverse.tech)**
 
 </div>
@@ -70,7 +69,7 @@ ThreatAtlas is a full-stack cybersecurity threat intelligence platform that lets
 | **Document** | Office document analysis |
 
 ### 🧠 AI & Intelligence
-- **Atlas AI Chatbot** — Contextual cybersecurity assistant (Groq LLaMA-3.3-70B)
+- **Atlas AI Chatbot** — Contextual cybersecurity assistant (Powered by Atlas AI LLaMA-3.3-70B)
 - **AI Summary** — Automatic threat verdict generation grounded in scan facts
 - **Threat Graph** — Force-directed visualization of threat relationships
 - **YARA Scanner** — Rule-based pattern matching
@@ -121,7 +120,7 @@ ThreatAtlas/
 | **Media Analysis** | fluent-ffmpeg |
 | **PDF Analysis** | pdf-parse |
 | **WHOIS** | whois-json |
-| **AI Chatbot** | Groq API (LLaMA-3.3-70B) |
+| **AI Chatbot** | Atlas AI API (LLaMA-3.3-70B) |
 | **Threat Intel** | VirusTotal Public API v3 |
 | **Phishing Intel** | OpenPhish feed |
 
@@ -133,7 +132,7 @@ ThreatAtlas/
 - Node.js 18+
 - npm 9+
 - A [VirusTotal API key](https://www.virustotal.com/gui/my-apikey) (free)
-- A [Groq API key](https://console.groq.com/keys) (free, optional — for AI features)
+- An Atlas AI / [Groq API key](https://console.groq.com/keys) (free, optional — for AI features)
 
 ### Clone & Install
 
@@ -147,17 +146,18 @@ npm run install:all
 
 ### Configure Environment
 
-**Frontend** — create `frontend/.env.local`:
+**Frontend** — create `frontend/.env`:
 ```env
 VITE_VT_API_KEY=your_virustotal_api_key
 VITE_API_BASE_URL=http://localhost:3001
-VITE_GROQ_API_KEY=your_groq_api_key   # optional
 ```
 
 **Backend** — create `backend/.env`:
 ```env
 PORT=3001
-ALLOWED_ORIGINS=http://localhost:3002
+ALLOWED_ORIGINS=http://localhost:3002,https://your-app.vercel.app
+VT_API_KEY=your_virustotal_api_key
+ATLAS_API_KEY=your_atlas_api_key   # optional
 ```
 
 ### Run Locally
@@ -179,23 +179,11 @@ Open **http://localhost:3002** in your browser.
 
 ## 🌍 Deployment
 
-ThreatAtlas is designed as a **Frontend → Vercel + Backend → Render** deployment.
-
-### Backend (Render)
-
-1. New Web Service → connect repo
-2. **Root Directory:** `backend`
-3. **Build:** `npm install && npm run build`
-4. **Start:** `npm start`
-5. Add Environment Variables:
-
-| Key | Value |
-|-----|-------|
-| `ALLOWED_ORIGINS` | `https://threatatlas.luckyverse.tech,https://your-app.vercel.app` |
+ThreatAtlas is intentionally designed as a **hybrid setup**: Frontend deployed to the cloud (Vercel) and Backend running securely on your **Local Machine**. This keeps your API keys entirely on your own hardware while enjoying a fast, globally distributed frontend.
 
 ### Frontend (Vercel)
 
-1. New Project → connect repo
+1. Create a New Project on Vercel and connect your repository.
 2. **Root Directory:** `frontend`
 3. **Framework:** Vite
 4. Add Environment Variables:
@@ -203,23 +191,17 @@ ThreatAtlas is designed as a **Frontend → Vercel + Backend → Render** deploy
 | Key | Value |
 |-----|-------|
 | `VITE_VT_API_KEY` | Your VirusTotal API key |
-| `VITE_API_BASE_URL` | `https://your-backend.onrender.com` |
-| `VITE_GROQ_API_KEY` | Your Groq API key |
+| `VITE_API_BASE_URL` | `http://localhost:3001` |
 
-### Custom Domain
+*(Note: Never place your `ATLAS_API_KEY` in Vercel. It belongs only in your local backend!)*
 
-Add a CNAME record in your DNS:
-```
-threatatlas  CNAME  cname.vercel-dns.com
-```
+### Backend (Local Machine)
 
-### Keeping Render Alive (Free Tier)
+The backend is designed to run locally, securely proxying requests to VirusTotal and Atlas AI. When you visit your Vercel URL, your browser will transparently route API calls to your local backend.
 
-The backend includes a **built-in self-ping** every 14 minutes (`process.env.RENDER` auto-activates it). Additionally, set up **UptimeRobot** for external monitoring:
-
-- URL: `https://your-backend.onrender.com/api/ping`
-- Interval: every 5 minutes
-- Free at [uptimerobot.com](https://uptimerobot.com)
+1. Navigate to the `backend` folder.
+2. Ensure your `.env` is configured (see Configure Environment above).
+3. **Start:** `npm run dev` or `npm start`
 
 ---
 
