@@ -167,6 +167,33 @@ app.get('/api/ipgeo', async (req, res) => {
   }
 });
 
+// Proxy for WebFox Tech Stack fingerprinting to bypass browser CORS
+app.get('/api/webfox/proxy', async (req, res) => {
+  const { url } = req.query;
+  if (!url || typeof url !== 'string') return res.status(400).json({ error: 'URL required' });
+  
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const target = url.startsWith('http') ? url : `https://${url}`;
+    
+    const response = await fetch(target, { signal: controller.signal });
+    clearTimeout(timeout);
+    
+    const headers: Record<string, string> = {};
+    response.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
+    
+    const bodyText = await response.text().catch(() => '');
+    
+    res.json({
+      headers,
+      body: bodyText.slice(0, 40000)
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Fetch failed', details: error.message });
+  }
+});
+
 // Proxy for VirusTotal file uploads to avoid CORS issues in the browser
 app.post('/api/vt/files', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });

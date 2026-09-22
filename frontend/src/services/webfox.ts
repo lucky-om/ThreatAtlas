@@ -453,22 +453,20 @@ async function detectTechStack(domain: string): Promise<TechStackResult> {
   let poweredBy = 'Unknown';
 
   // Attempt a quick HEAD-then-GET to detect stack from headers + body
+  // Fetch via proxy to bypass CORS
   try {
-    const res = await fetch(`https://${domain}`, {
-      signal: AbortSignal.timeout(8000),
-    });
-    res.headers.forEach((v, k) => { headersRaw[k.toLowerCase()] = v; });
-    serverBanner = headersRaw['server'] || 'Hidden';
-    poweredBy = headersRaw['x-powered-by'] || 'Hidden';
-    try { body = (await res.text()).slice(0, 40000).toLowerCase(); } catch { /* ignore body read errors */ }
-  } catch {
-    try {
-      const res = await fetch(`http://${domain}`, { signal: AbortSignal.timeout(6000) });
-      res.headers.forEach((v, k) => { headersRaw[k.toLowerCase()] = v; });
+    const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+    const proxyUrl = `${backendBase}/api/webfox/proxy?url=${encodeURIComponent(domain)}`;
+    const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
+    if (res.ok) {
+      const data = await res.json();
+      Object.assign(headersRaw, data.headers || {});
       serverBanner = headersRaw['server'] || 'Hidden';
       poweredBy = headersRaw['x-powered-by'] || 'Hidden';
-      try { body = (await res.text()).slice(0, 40000).toLowerCase(); } catch { /* ignore */ }
-    } catch { /* unreachable or CORS blocked */ }
+      body = (data.body || '').toLowerCase();
+    }
+  } catch {
+    // Proxy failed or timeout
   }
 
   const combined = body + ' ' + JSON.stringify(headersRaw).toLowerCase();
