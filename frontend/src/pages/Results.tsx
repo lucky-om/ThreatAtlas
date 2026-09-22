@@ -436,7 +436,8 @@ export const Results: React.FC = () => {
   }, [rawTarget]);
 
   useEffect(() => {
-    executeUnifiedScan(false);
+    const id = setTimeout(() => executeUnifiedScan(false), 0);
+    return () => clearTimeout(id);
   }, [rawTarget, executeUnifiedScan]);
 
   // ── UNIFIED SCAN PROGRESS ORCHESTRATOR ────────────────────────────────────
