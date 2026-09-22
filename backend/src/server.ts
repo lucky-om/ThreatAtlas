@@ -266,6 +266,48 @@ app.get('/api/vt/proxy', async (req, res) => {
 });
 
 
+// --- GROQ AI PROXY (Atlas Intelligence Engine) ---
+// Proxies Groq API requests server-side so GROQ_API_KEY stays off the browser
+app.post('/api/groq/chat', async (req, res) => {
+  const groqKey = process.env.GROQ_API_KEY || '';
+  if (!groqKey) {
+    return res.status(401).json({ error: 'GROQ_API_KEY not configured. Add it to Render environment variables.' });
+  }
+
+  const { messages, max_tokens = 800, temperature = 0.7 } = req.body;
+  if (!messages || !Array.isArray(messages)) {
+    return res.status(400).json({ error: 'messages array required' });
+  }
+
+  try {
+    console.log('[Groq Proxy] Chat request →', messages.length, 'messages');
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${groqKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages,
+        max_tokens,
+        temperature,
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('[Groq Proxy] Error:', response.status, data);
+      return res.status(response.status).json(data);
+    }
+    res.json(data);
+  } catch (error: any) {
+    console.error('[Groq Proxy] Failed:', error.message);
+    res.status(500).json({ error: 'Groq proxy failed', details: error.message });
+  }
+});
+
+
 // --- FORENSICS ENGINE ---
 app.post('/api/forensics/image/exif', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });

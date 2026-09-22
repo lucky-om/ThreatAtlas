@@ -212,10 +212,12 @@ export const Results: React.FC = () => {
       if (isHash) {
         setLiveStage('Querying global multi-vendor antivirus database for hash signatures...');
         const apiKey = import.meta.env.VITE_VT_API_KEY || '';
-        const headers = apiKey ? { 'x-apikey': apiKey } : undefined;
+        const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
         const [fileData, behaviorRes] = await Promise.allSettled([
           lookupHash(target),
-          fetch(`https://www.virustotal.com/api/v3/files/${target}/behaviours?limit=5`, { headers }).then(r => r.ok ? r.json() : null)
+          fetch(`${backendBase}/api/vt/proxy?path=${encodeURIComponent(`/files/${target}/behaviours?limit=5`)}`, {
+            headers: apiKey ? { 'x-apikey': apiKey } : {}
+          }).then(r => r.ok ? r.json() : null)
         ]);
 
         if (fileData.status === 'fulfilled') {
@@ -286,10 +288,12 @@ export const Results: React.FC = () => {
           if (analysisData.hash) {
             try {
               const apiKey = import.meta.env.VITE_VT_API_KEY || '';
-              const headers = apiKey ? { 'x-apikey': apiKey } : undefined;
+              const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
               const [fullFileData, behaviorRes] = await Promise.allSettled([
                 lookupHash(analysisData.hash),
-                fetch(`https://www.virustotal.com/api/v3/files/${analysisData.hash}/behaviours?limit=5`, { headers }).then(r => r.ok ? r.json() : null)
+                fetch(`${backendBase}/api/vt/proxy?path=${encodeURIComponent(`/files/${analysisData.hash}/behaviours?limit=5`)}`, {
+                  headers: apiKey ? { 'x-apikey': apiKey } : {}
+                }).then(r => r.ok ? r.json() : null)
               ]);
 
               if (fullFileData.status === 'fulfilled') {

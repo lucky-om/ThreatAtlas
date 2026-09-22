@@ -222,17 +222,14 @@ export const AiChatbot: React.FC = () => {
 
       let aiReply = '';
 
-      if (hasKey) {
+      if (hasKey || true) { // always try via backend proxy first
         try {
-          const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+          const res = await fetch(`${backendBase}/api/groq/chat`, {
             method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${atlasKey}`,
-              'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              model: 'groq/compound',
-              messages: apiMessages.slice(-6).map(m => ({ ...m, content: m.content.substring(0, 4000) })),
+              messages: apiMessages.slice(-8).map(m => ({ ...m, content: m.content.substring(0, 4000) })),
               max_tokens: 800,
               temperature: 0.7,
             })
@@ -245,7 +242,7 @@ export const AiChatbot: React.FC = () => {
             const errData = await res.json().catch(() => ({}));
             if (import.meta.env.DEV) console.error('[Atlas] Engine error:', res.status, errData);
             const statusMsg = res.status === 401
-              ? 'Atlas engine authentication failed. Check your VITE_GROQ_API_KEY.'
+              ? 'Atlas engine authentication failed. Check GROQ_API_KEY in Render environment.'
               : res.status === 429
               ? 'Atlas engine rate limit reached. Please wait a moment before retrying.'
               : res.status === 413
