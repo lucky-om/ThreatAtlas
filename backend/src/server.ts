@@ -58,7 +58,7 @@ app.get('/api/status', (req, res) => {
     status: 'ok',
     version: '2.0',
     origin: req.headers.origin || 'none',
-    allowedOrigins,
+    cors: 'unrestricted',
     vtKeyConfigured: Boolean(process.env.VT_API_KEY || process.env.VITE_VT_API_KEY),
     atlasKeyConfigured: Boolean(process.env.ATLAS_API_KEY),
     timestamp: new Date().toISOString(),
@@ -153,16 +153,18 @@ app.all('/api/proxy', async (req, res) => {
     const timeout = setTimeout(() => controller.abort(), 12000);
     const target = url.startsWith('http') ? url : `https://${url}`;
     
+    const reqHeaders = { ...req.headers } as Record<string, string>;
+    
+    // Clean up restricted headers
+    delete reqHeaders['host'];
+    delete reqHeaders['origin'];
+    delete reqHeaders['referer'];
+    
     const fetchOptions: RequestInit = {
       method: req.method,
       signal: controller.signal,
-      headers: { ...req.headers } as Record<string, string>,
+      headers: reqHeaders,
     };
-    
-    // Clean up restricted headers
-    delete fetchOptions.headers['host'];
-    delete fetchOptions.headers['origin'];
-    delete fetchOptions.headers['referer'];
     
     if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
       // For simple proxying, we can use the raw body if we add raw body parsing
@@ -175,13 +177,13 @@ app.all('/api/proxy', async (req, res) => {
     const response = await fetch(target, fetchOptions);
     clearTimeout(timeout);
     
-    const headers: Record<string, string> = {};
-    response.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
+    const resHeaders: Record<string, string> = {};
+    response.headers.forEach((v, k) => { resHeaders[k.toLowerCase()] = v; });
     
     const bodyText = await response.text().catch(() => '');
     
     res.json({
-      headers,
+      headers: resHeaders,
       body: bodyText.slice(0, 40000)
     });
   } catch (error: any) {
