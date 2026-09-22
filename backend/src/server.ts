@@ -76,7 +76,7 @@ app.get('/api/status', (req, res) => {
     origin: req.headers.origin || 'none',
     allowedOrigins,
     vtKeyConfigured: Boolean(process.env.VT_API_KEY || process.env.VITE_VT_API_KEY),
-    groqKeyConfigured: Boolean(process.env.GROQ_API_KEY),
+    atlasKeyConfigured: Boolean(process.env.ATLAS_API_KEY),
     timestamp: new Date().toISOString(),
   });
 });
@@ -266,12 +266,12 @@ app.get('/api/vt/proxy', async (req, res) => {
 });
 
 
-// --- GROQ AI PROXY (Atlas Intelligence Engine) ---
-// Proxies Groq API requests server-side so GROQ_API_KEY stays off the browser
-app.post('/api/groq/chat', async (req, res) => {
-  const groqKey = process.env.GROQ_API_KEY || '';
-  if (!groqKey) {
-    return res.status(401).json({ error: 'GROQ_API_KEY not configured. Add it to backend .env file.' });
+// --- ATLAS AI PROXY (Atlas Intelligence Engine) ---
+// Proxies Atlas API requests server-side so ATLAS_API_KEY stays off the browser
+app.post('/api/atlas/chat', async (req, res) => {
+  const atlasKey = process.env.ATLAS_API_KEY || '';
+  if (!atlasKey) {
+    return res.status(401).json({ error: 'ATLAS_API_KEY not configured. Add it to backend .env file.' });
   }
 
   const { messages, max_tokens = 800, temperature = 0.7 } = req.body;
@@ -280,11 +280,11 @@ app.post('/api/groq/chat', async (req, res) => {
   }
 
   try {
-    console.log('[Groq Proxy] Chat request →', messages.length, 'messages');
+    console.log('[Atlas Proxy] Chat request →', messages.length, 'messages');
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${groqKey}`,
+        'Authorization': `Bearer ${atlasKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -297,13 +297,13 @@ app.post('/api/groq/chat', async (req, res) => {
 
     const data = await response.json();
     if (!response.ok) {
-      console.error('[Groq Proxy] Error:', response.status, data);
+      console.error('[Atlas Proxy] Error:', response.status, data);
       return res.status(response.status).json(data);
     }
     res.json(data);
   } catch (error: any) {
-    console.error('[Groq Proxy] Failed:', error.message);
-    res.status(500).json({ error: 'Groq proxy failed', details: error.message });
+    console.error('[Atlas Proxy] Failed:', error.message);
+    res.status(500).json({ error: 'Atlas proxy failed', details: error.message });
   }
 });
 

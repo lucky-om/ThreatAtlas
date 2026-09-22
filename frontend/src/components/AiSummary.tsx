@@ -55,18 +55,17 @@ Finding: <1 sentence factual summary matching the ${verdict} verdict>
 Action: <1 sentence recommended security practice matching the ${verdict} verdict>`;
 
         let reply = '';
-        const atlasKey = import.meta.env.VITE_GROQ_API_KEY;
         const apiMessages = [
           { role: 'system', content: 'You are Atlas, an elite cybersecurity analyst. Provide concise, 100% factually grounded verdicts. Never invent fictional vulnerabilities when a file is clean.' },
           { role: 'user', content: prompt }
         ];
 
-        if (atlasKey) {
-          try {
-            const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        try {
+          const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+            const res = await fetch(`${backendBase}/api/atlas/chat`, {
               method: 'POST',
-              headers: { 'Authorization': `Bearer ${atlasKey}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: apiMessages, max_tokens: 300, temperature: 0.5 })
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ messages: apiMessages, max_tokens: 300, temperature: 0.5 })
             });
             if (res.ok) {
               const data = await res.json();
@@ -77,8 +76,6 @@ Action: <1 sentence recommended security practice matching the ${verdict} verdic
               if (import.meta.env.DEV) console.error('[Atlas] Summary error:', res.status, errData);
             }
           } catch (e) { if (import.meta.env.DEV) console.warn('[Atlas] Summary failed:', e); }
-        }
-
         if (reply) {
           if (reply.includes('Finding:') && reply.includes('Action:')) {
             const fMatch = reply.match(/Finding:\s*([^\n]+)/i);

@@ -100,7 +100,7 @@ Deep static analysis embedded in the results page:
 
 **Atlas AI (that's me!)**: Cybersecurity assistant available on every page. Ask me about malware samples, MITRE ATT&CK techniques, YARA rules, CVEs, threat actors, or any ThreatAtlas feature.
 
-**AI Threat Summary (AiSummary)**: Automatically generated after every scan. Provides a 2-line verdict: "Finding" (what the scan found) and "Action" (recommended response). Powered by Groq LLaMA-3.3-70B. Verdicts are strictly grounded in scan facts — CRITICAL/SUSPICIOUS/CLEAN with no hallucination.
+**AI Threat Summary (AiSummary)**: Automatically generated after every scan. Provides a 2-line verdict: "Finding" (what the scan found) and "Action" (recommended response). Powered by Atlas AI LLaMA-3.3-70B. Verdicts are strictly grounded in scan facts — CRITICAL/SUSPICIOUS/CLEAN with no hallucination.
 
 **3D Threat Graph (/threat-graph)**: Interactive force-directed visualization of threat relationships. Enter a hash, IP, or domain to map its network relationships (contacted IPs, DNS resolutions, C2 nodes, MITRE techniques). Includes preset clusters for famous malware (WannaCry, Cobalt Strike APT41).
 
@@ -120,7 +120,7 @@ Deep static analysis embedded in the results page:
 ### 🏗️ TECH STACK
 - Frontend: React 18 + TypeScript + Vite 5 on Vercel
 - Backend: Node.js + Express 5 + TypeScript on Render (free tier with self-ping keepalive)
-- AI: Groq API (LLaMA-3.3-70B) for Atlas chatbot and threat summaries
+- AI: Atlas AI (LLaMA-3.3-70B) for chatbot and threat summaries
 - Threat Intel: VirusTotal Public API v3
 - Phishing Intel: OpenPhish live feed
 - Media Analysis: fluent-ffmpeg
@@ -177,9 +177,6 @@ export const AiChatbot: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const atlasKey = import.meta.env.VITE_GROQ_API_KEY;
-  const hasKey = Boolean(atlasKey);
-
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -222,42 +219,31 @@ export const AiChatbot: React.FC = () => {
 
       let aiReply = '';
 
-      if (hasKey || true) { // always try via backend proxy first
-        try {
-          const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-          const res = await fetch(`${backendBase}/api/groq/chat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              messages: apiMessages.slice(-8).map(m => ({ ...m, content: m.content.substring(0, 4000) })),
-              max_tokens: 800,
-              temperature: 0.7,
-            })
-          });
-          if (res.ok) {
-            const data = await res.json();
-            aiReply = data.choices?.[0]?.message?.content || '';
-            aiReply = aiReply.replace(/<think>[\s\S]*?(<\/think>|$)/g, '').trim();
-          } else {
-            const errData = await res.json().catch(() => ({}));
-            if (import.meta.env.DEV) console.error('[Atlas] Engine error:', res.status, errData);
-            const statusMsg = res.status === 401
-              ? 'Atlas engine authentication failed. Check GROQ_API_KEY in backend .env.'
-              : res.status === 429
-              ? 'Atlas engine rate limit reached. Please wait a moment before retrying.'
-              : res.status === 413
-              ? 'Atlas engine error: Input too large. Please shorten your message or clear history.'
-              : `Atlas engine returned status ${res.status}.`;
-            throw new Error(statusMsg);
-          }
-        } catch (e: any) {
-          if (!e.message.includes('Atlas engine')) {
-            if (import.meta.env.DEV) console.warn('[Atlas] Request failed:', e);
-          }
-          throw e;
-        }
+      const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+      const res = await fetch(`${backendBase}/api/atlas/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: apiMessages.slice(-8).map(m => ({ ...m, content: m.content.substring(0, 4000) })),
+          max_tokens: 800,
+          temperature: 0.7,
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        aiReply = data.choices?.[0]?.message?.content || '';
+        aiReply = aiReply.replace(/<think>[\s\S]*?(<\/think>|$)/g, '').trim();
       } else {
-        throw new Error('NO_KEY');
+        const errData = await res.json().catch(() => ({}));
+        if (import.meta.env.DEV) console.error('[Atlas] Engine error:', res.status, errData);
+        const statusMsg = res.status === 401
+          ? 'Atlas engine authentication failed. Check ATLAS_API_KEY in backend .env.'
+          : res.status === 429
+          ? 'Atlas engine rate limit reached. Please wait a moment before retrying.'
+          : res.status === 413
+          ? 'Atlas engine error: Input too large. Please shorten your message or clear history.'
+          : `Atlas engine returned status ${res.status}.`;
+        throw new Error(statusMsg);
       }
 
       if (!aiReply) {
@@ -273,13 +259,12 @@ export const AiChatbot: React.FC = () => {
         },
       ]);
     } catch (err: any) {
-      const isNoKey = err.message === 'NO_KEY';
       setMessages(prev => [
         ...prev,
         {
           role: 'assistant',
-          content: isNoKey
-            ? '**Atlas Engine Offline** — No API key configured.\n\nTo activate Atlas Intelligence, add your Groq API key to `.env`:\n```\nVITE_GROQ_API_KEY=gsk_...\n```\nGet a free key at **console.groq.com**.'
+          content: err.message.includes('ATLAS_API_KEY')
+            ? '**Atlas Engine Offline** — No API key configured.\n\nTo activate Atlas Intelligence, add your Atlas API key to `backend/.env`:\n```\nATLAS_API_KEY=gsk_...\n```\nGet a free key at **console.groq.com**.'
             : `**Connection Error** — ${err.message || 'Check your connection and try again.'}`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
@@ -444,8 +429,8 @@ export const AiChatbot: React.FC = () => {
                 <div style={{ fontSize: '15px', fontWeight: 700, fontFamily: 'var(--font-headline)', color: 'var(--on-surface)' }}>
                   Atlas <span style={{ color: 'var(--brand)' }}>AI</span>
                 </div>
-                <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: hasKey ? 'var(--status-clean)' : 'var(--status-suspicious)', fontWeight: 700, letterSpacing: '0.08em' }}>
-                  {hasKey ? '● ONLINE' : '● KEY REQUIRED'}
+                <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--status-clean)', fontWeight: 700, letterSpacing: '0.08em' }}>
+                  ● ONLINE
                 </div>
               </div>
             </div>
@@ -473,18 +458,16 @@ export const AiChatbot: React.FC = () => {
           </div>
 
           {/* No-key banner */}
-          {!hasKey && (
-            <div style={{
-              padding: '10px 16px', background: 'rgba(255,140,0,0.08)',
-              borderBottom: '1px solid rgba(255,140,0,0.2)',
-              display: 'flex', alignItems: 'center', gap: '10px',
-            }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--brand-amber)', flexShrink: 0 }}>key_off</span>
-              <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--brand-amber)', lineHeight: 1.4 }}>
-                Add <strong>VITE_GROQ_API_KEY</strong> to <code style={{ background: 'rgba(255,255,255,0.07)', padding: '1px 4px', borderRadius: '3px' }}>.env</code> to activate Atlas
-              </span>
-            </div>
-          )}
+          <div style={{
+            padding: '10px 16px', background: 'rgba(255,140,0,0.08)',
+            borderBottom: '1px solid rgba(255,140,0,0.2)',
+            display: 'flex', alignItems: 'center', gap: '10px',
+          }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--brand-amber)', flexShrink: 0 }}>hub</span>
+            <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--brand-amber)', lineHeight: 1.4 }}>
+              Connected to Atlas Engine via local backend.
+            </span>
+          </div>
 
           {/* Messages Body */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -538,7 +521,7 @@ export const AiChatbot: React.FC = () => {
               ref={inputRef}
               type="text"
               className="input-field"
-              placeholder={hasKey ? 'Ask Atlas cybersecurity intelligence...' : 'Configure VITE_GROQ_API_KEY to enable...'}
+              placeholder={'Ask Atlas cybersecurity intelligence...'}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') sendMessage(); }}
