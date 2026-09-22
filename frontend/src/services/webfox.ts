@@ -189,7 +189,8 @@ export async function resolveDnsRecords(domain: string): Promise<DnsRecord[]> {
   const records: DnsRecord[] = [];
 
   try {
-    const res = await fetch(`/api/webfox/dns?domain=${encodeURIComponent(domain)}`, {
+    const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+    const res = await fetch(`${backendBase}/api/webfox/dns?domain=${encodeURIComponent(domain)}`, {
       signal: AbortSignal.timeout(8000)
     });
     if (res.ok) {
@@ -229,8 +230,9 @@ export async function discoverSubdomains(domain: string): Promise<string[]> {
     // Source 1: crt.sh Certificate Transparency
     (async () => {
       try {
+        const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
         const targetUrl = `https://crt.sh/?q=%.${encodeURIComponent(cleanDomain)}&output=json`;
-        const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`, {
+        const res = await fetch(`${backendBase}/api/webfox/proxy?url=${encodeURIComponent(targetUrl)}`, {
           signal: AbortSignal.timeout(7000),
         });
         if (res.ok) {
@@ -248,8 +250,9 @@ export async function discoverSubdomains(domain: string): Promise<string[]> {
     // Source 2: HackerTarget (hostsearch API — ported from WebFox)
     (async () => {
       try {
+        const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
         const targetUrl = `https://api.hackertarget.com/hostsearch/?q=${encodeURIComponent(cleanDomain)}`;
-        const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`, {
+        const res = await fetch(`${backendBase}/api/webfox/proxy?url=${encodeURIComponent(targetUrl)}`, {
           signal: AbortSignal.timeout(6000),
         });
         if (res.ok) {
@@ -264,7 +267,8 @@ export async function discoverSubdomains(domain: string): Promise<string[]> {
     // Source 3: AlienVault OTX Passive DNS (ported from WebFox)
     (async () => {
       try {
-        const res = await fetch(`https://otx.alienvault.com/api/v1/indicators/domain/${encodeURIComponent(cleanDomain)}/passive_dns`, {
+        const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+        const res = await fetch(`${backendBase}/api/webfox/proxy?url=${encodeURIComponent(`https://otx.alienvault.com/api/v1/indicators/domain/${cleanDomain}/passive_dns`)}`, {
           signal: AbortSignal.timeout(7000),
         });
         if (res.ok) {
@@ -280,8 +284,9 @@ export async function discoverSubdomains(domain: string): Promise<string[]> {
     // Source 4: CertSpotter API
     (async () => {
       try {
+        const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
         const targetUrl = `https://api.certspotter.com/v1/issuances?domain=${encodeURIComponent(cleanDomain)}&include_subdomains=true&expand=dns_names`;
-        const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`, {
+        const res = await fetch(`${backendBase}/api/webfox/proxy?url=${encodeURIComponent(targetUrl)}`, {
           signal: AbortSignal.timeout(6000),
         });
         if (res.ok) {
@@ -300,8 +305,9 @@ export async function discoverSubdomains(domain: string): Promise<string[]> {
     // Source 5: Anubis (jldc.me)
     (async () => {
       try {
+        const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
         const targetUrl = `https://jldc.me/anubis/subdomains/${encodeURIComponent(cleanDomain)}`;
-        const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`, {
+        const res = await fetch(`${backendBase}/api/webfox/proxy?url=${encodeURIComponent(targetUrl)}`, {
           signal: AbortSignal.timeout(6000),
         });
         if (res.ok) {
@@ -316,8 +322,9 @@ export async function discoverSubdomains(domain: string): Promise<string[]> {
     // Source 6: ThreatMiner
     (async () => {
       try {
+        const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
         const targetUrl = `https://api.threatminer.org/v2/domain.php?q=${encodeURIComponent(cleanDomain)}&rt=5`;
-        const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`, {
+        const res = await fetch(`${backendBase}/api/webfox/proxy?url=${encodeURIComponent(targetUrl)}`, {
           signal: AbortSignal.timeout(6000),
         });
         if (res.ok) {
@@ -337,7 +344,8 @@ export async function discoverSubdomains(domain: string): Promise<string[]> {
 export async function lookupWhois(domain: string): Promise<WhoisRecord | undefined> {
   const cleanDomain = domain.replace(/^www\./, '').toLowerCase();
   try {
-    const res = await fetch(`/api/webfox/whois?query=${encodeURIComponent(cleanDomain)}`, {
+    const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+    const res = await fetch(`${backendBase}/api/webfox/whois?query=${encodeURIComponent(cleanDomain)}`, {
       signal: AbortSignal.timeout(10000),
     });
     if (res.ok) {
@@ -485,12 +493,10 @@ async function detectTechStack(domain: string): Promise<TechStackResult> {
     pathsToCheck.map(async ({ path, risk }) => {
       for (const proto of ['https', 'http']) {
         try {
-          const r = await fetch(`${proto}://${domain}${path}`, {
-            method: 'HEAD',
-            signal: AbortSignal.timeout(4000),
-            redirect: 'manual',
-          });
-          if (r.status === 200) {
+          const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+          const proxyUrl = `${backendBase}/api/webfox/proxy?url=${encodeURIComponent(`${proto}://${domain}${path}`)}`;
+          const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(6000) });
+          if (r.ok) {
             exposedPaths.push({ path: `${proto}://${domain}${path}`, status: 200, risk });
             return;
           }
@@ -538,7 +544,8 @@ export async function runWebFoxRecon(targetUrlOrDomain: string): Promise<WebFoxR
   let cpes: string[] = [];
   if (ip) {
     try {
-      const shodanRes = await fetch(`https://internetdb.shodan.io/${ip}`, { signal: AbortSignal.timeout(6000) });
+      const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+      const shodanRes = await fetch(`${backendBase}/api/webfox/proxy?url=${encodeURIComponent(`https://internetdb.shodan.io/${ip}`)}`, { signal: AbortSignal.timeout(6000) });
       if (shodanRes.ok) {
         const shodanData = await shodanRes.json();
         if (Array.isArray(shodanData.ports)) openPorts = shodanData.ports;
@@ -592,11 +599,13 @@ async function runWebFoxCrawl(domain: string): Promise<WebFoxCrawlResult> {
   };
 
   try {
-    // We proxy through corsproxy.io to avoid CORS limitations on text fetching
+    // We proxy through the backend to avoid CORS limitations on text fetching
     const fetchProxy = async (url: string) => {
-      const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(url)}`);
+      const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+      const res = await fetch(`${backendBase}/api/webfox/proxy?url=${encodeURIComponent(url)}`);
       if (!res.ok) throw new Error('Proxy fetch failed');
-      return await res.text();
+      const data = await res.json();
+      return data.body || '';
     };
 
     // 1. Robots.txt Analysis

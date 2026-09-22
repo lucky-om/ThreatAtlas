@@ -480,7 +480,8 @@ export async function analyzePhishGuardLive(url: string): Promise<PhishGuardResu
   const localResult = analyzeWithPhishGuard(url);
   
   try {
-    const res = await fetch(`/api/phishguard/intel?url=${encodeURIComponent(url)}`, {
+    const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+    const res = await fetch(`${backendBase}/api/phishguard/intel?url=${encodeURIComponent(url)}`, {
       signal: AbortSignal.timeout(6000)
     });
     

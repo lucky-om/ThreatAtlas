@@ -167,7 +167,53 @@ app.get('/api/ipgeo', async (req, res) => {
   }
 });
 
-// Proxy for WebFox Tech Stack fingerprinting to bypass browser CORS
+// Generic CORS proxy for frontend
+app.all('/api/proxy', async (req, res) => {
+  const { url } = req.query;
+  if (!url || typeof url !== 'string') return res.status(400).json({ error: 'URL required' });
+  
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    const target = url.startsWith('http') ? url : `https://${url}`;
+    
+    const fetchOptions: RequestInit = {
+      method: req.method,
+      signal: controller.signal,
+      headers: { ...req.headers } as Record<string, string>,
+    };
+    
+    // Clean up restricted headers
+    delete fetchOptions.headers['host'];
+    delete fetchOptions.headers['origin'];
+    delete fetchOptions.headers['referer'];
+    
+    if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+      // For simple proxying, we can use the raw body if we add raw body parsing
+      // But express.json() / urlencoded is applied, so we serialize it back
+      if (req.is('json')) fetchOptions.body = JSON.stringify(req.body);
+      else if (req.is('urlencoded')) fetchOptions.body = new URLSearchParams(req.body).toString();
+      else fetchOptions.body = req.body;
+    }
+    
+    const response = await fetch(target, fetchOptions);
+    clearTimeout(timeout);
+    
+    const headers: Record<string, string> = {};
+    response.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
+    
+    const bodyText = await response.text().catch(() => '');
+    
+    res.json({
+      headers,
+      body: bodyText.slice(0, 40000)
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Proxy fetch failed', details: error.message });
+  }
+});
+
+// Old endpoint to not break existing code
 app.get('/api/webfox/proxy', async (req, res) => {
   const { url } = req.query;
   if (!url || typeof url !== 'string') return res.status(400).json({ error: 'URL required' });

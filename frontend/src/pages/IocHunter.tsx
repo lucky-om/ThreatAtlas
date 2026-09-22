@@ -75,7 +75,8 @@ async function lookupUrlhaus(ioc: IocEntry): Promise<Partial<IocResult>> {
     if (ioc.type === 'url') formData.append('url', ioc.ioc);
     else formData.append('host', ioc.ioc);
 
-    const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(endpoint)}`, {
+    const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+    const res = await fetch(`${backendBase}/api/proxy?url=${encodeURIComponent(endpoint)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formData.toString(),
@@ -95,7 +96,8 @@ async function lookupMalwareBazaar(ioc: IocEntry): Promise<Partial<IocResult>> {
     formData.append('query', 'get_info');
     formData.append('hash', ioc.ioc);
     
-    const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent('https://mb-api.abuse.ch/api/v1/')}`, {
+    const backendBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+    const res = await fetch(`${backendBase}/api/proxy?url=${encodeURIComponent('https://mb-api.abuse.ch/api/v1/')}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formData.toString(),
